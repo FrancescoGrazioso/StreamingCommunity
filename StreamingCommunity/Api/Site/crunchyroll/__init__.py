@@ -25,7 +25,7 @@ from .series import download_series
 indice = 8
 _useFor = "Anime"
 _priority = 0
-_engineDownload = "hls"
+_engineDownload = "dash"
 _deprecate = False
 
 msg = Prompt()

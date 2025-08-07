@@ -12,6 +12,7 @@ class Episode:
         self.name: str = data.get('name', '')
         self.duration: int = data.get('duration', 0)
         self.url: str = data.get('url', '')
+        self.mpd_id: str = data.get('mpd_id', '')
 
     def __str__(self):
         return f"Episode(id={self.id}, number={self.number}, name='{self.name}', duration={self.duration} sec)"

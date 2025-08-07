@@ -11,6 +11,9 @@ from StreamingCommunity.Util.headers import get_userAgent
 from StreamingCommunity.Util.table import TVShowManager
 from StreamingCommunity.Api.Template.config_loader import site_constant
 from StreamingCommunity.Api.Template.Class.SearchType import MediaManager
+
+
+# Logic Import
 from .util.ScrapeSerie import GetSerieInfo
 
 

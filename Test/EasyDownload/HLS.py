@@ -18,10 +18,10 @@ from StreamingCommunity import HLS_Downloader
 
 start_message()
 logger = Logger()
-result =  HLS_Downloader(
+hls_process =  HLS_Downloader(
     output_path=".\\Video\\test.mp4",
     m3u8_url="https://acdn.ak-stream-videoplatform.sky.it/hls/2024/11/21/968275/master.m3u8"
 ).start()
 
-thereIsError = result['error'] is not None
+thereIsError = hls_process['error'] is not None
 print(thereIsError)

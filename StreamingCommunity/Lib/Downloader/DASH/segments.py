@@ -96,7 +96,7 @@ class MPD_Segments:
         self.info_nRetry = 0
 
         try:
-            async with httpx.AsyncClient(timeout=SEGMENT_MAX_TIMEOUT) as client:
+            async with httpx.AsyncClient(timeout=SEGMENT_MAX_TIMEOUT, follow_redirects=True) as client:
                 # Download init segment
                 await self._download_init_segment(client, init_url, concat_path, estimator, progress_bar)
 
@@ -134,7 +134,7 @@ class MPD_Segments:
         
         try:
             headers = {'User-Agent': get_userAgent()}
-            response = await client.get(init_url, headers=headers)
+            response = await client.get(init_url, headers=headers, follow_redirects=True)
 
             with open(concat_path, 'wb') as outfile:
                 if response.status_code == 200:
@@ -160,7 +160,8 @@ class MPD_Segments:
                 headers = {'User-Agent': get_userAgent()}
                 for attempt in range(max_retry):
                     try:
-                        resp = await client.get(url, headers=headers)
+                        resp = await client.get(url, headers=headers, follow_redirects=True)
+
                         if resp.status_code == 200:
                             return idx, resp.content, attempt
                         else:
@@ -213,7 +214,7 @@ class MPD_Segments:
 
                     for attempt in range(max_retry):
                         try:
-                            resp = await client.get(url, headers=headers)
+                            resp = await client.get(url, headers=headers, follow_redirects=True)
 
                             if resp.status_code == 200:
                                 return idx, resp.content, attempt

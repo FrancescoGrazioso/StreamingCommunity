@@ -179,6 +179,29 @@ client.start_download()
 See [Torrent example](./Test/Download/TOR.py) for complete usage.
 </details>
 
+<details>
+<summary>🎞️ DASH Downloader</summary>
+
+```python
+license_url = "https://example.com/stream.mpd"
+mpd_url = "https://example.com/get_license"
+
+dash_process = DASH_Downloader(
+    cdm_device=get_wvd_path(),
+    license_url=license_url,
+    mpd_url=mpd_url,
+    output_path="output.mp4",
+)
+dash_process.parse_manifest()
+
+if dash_process.download_and_decrypt():
+    dash_process.finalize_output()
+
+dash_process.get_status()
+```
+
+</details>
+
 ## Binary Location
 
 <details>
