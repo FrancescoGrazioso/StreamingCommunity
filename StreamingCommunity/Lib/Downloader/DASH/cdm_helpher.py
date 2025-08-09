@@ -32,8 +32,8 @@ def get_widevine_keys(pssh, license_url, cdm_device_path, headers=None, payload=
     """
 
     # Check if CDM file exists
-    if not os.path.isfile(cdm_device_path):
-        console.print(f"[bold red] CDM file not found: {cdm_device_path}[/bold red]")
+    if not cdm_device_path or not isinstance(cdm_device_path, (str, bytes, os.PathLike)) or not os.path.isfile(cdm_device_path):
+        console.print(f"[bold red] CDM file not found or invalid path: {cdm_device_path}[/bold red]")
         return None
 
     # Check if PSSH is a valid base64 string
