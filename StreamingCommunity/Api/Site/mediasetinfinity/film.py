@@ -49,15 +49,7 @@ def download_film(select_title: MediaItem) -> Tuple[str, bool]:
     # Generate mpd and license URLs
     bearer = get_bearer_token()
 
-    # Extract ID from the episode URL
-    episode_id = select_title.url.split('_')[-1]
-    if "http" in episode_id:
-        try: episode_id = select_title.url.split('/')[-1]
-        except Exception:
-            console.print(f"[red]Error:[/red] Failed to parse episode ID from URL: {select_title.url}")
-            return None, True
-
-    playback_json = get_playback_url(bearer, episode_id)
+    playback_json = get_playback_url(bearer, select_title.id)
     tracking_info = get_tracking_info(bearer, playback_json)[0]
 
     license_url = generate_license_url(bearer, tracking_info)

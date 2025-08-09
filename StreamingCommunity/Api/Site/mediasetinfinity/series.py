@@ -64,16 +64,8 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
 
     # Generate mpd and license URLs
     bearer = get_bearer_token()
-    
-    # Extract ID from the episode URL
-    episode_id = obj_episode.url.split('_')[-1]
-    if "http" in episode_id:
-        try: episode_id = obj_episode.url.split('/')[-1]
-        except Exception:
-            console.print(f"[red]Error:[/red] Failed to parse episode ID from URL: {obj_episode.url}")
-            return None, True
 
-    playback_json = get_playback_url(bearer, episode_id)
+    playback_json = get_playback_url(bearer, obj_episode.id)
     tracking_info = get_tracking_info(bearer, playback_json)[0]
 
     license_url = generate_license_url(bearer, tracking_info)

@@ -37,7 +37,7 @@ def title_search(query: str) -> int:
     media_search_manager.clear()
     table_show_manager.clear()
 
-    search_url = f'https://api-ott-prod-fe.mediaset.net/PROD/play/reco/anonymous/v2.0'
+    search_url = f'https://api-ott-prod-fe.mediaset.net/PROD/play/reco/account/v2.0'
     console.print(f"[cyan]Search url: [yellow]{search_url}")
 
     params = {
@@ -48,11 +48,10 @@ def title_search(query: str) -> int:
         'contentId': '',
         'property': 'search',
         'tenant': 'play-prod-v2',
-        'userContext': 'iwiAeyJwbGF0Zm9ybSI6IndlYiJ9Aw==',
         'aresContext': '',
+        'clientId': 'client_id',
         'page': '1',
         'hitsPerPage': '8',
-        'clientId': 'client_id'
     }
 
     headers = get_headers()
