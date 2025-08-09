@@ -2,7 +2,6 @@
 
 import base64
 import logging
-import os
 
 
 # External libraries
@@ -30,11 +29,6 @@ def get_widevine_keys(pssh, license_url, cdm_device_path, headers=None, payload=
     Returns:
         list: List of dicts {'kid': ..., 'key': ...} (only CONTENT keys) or None if error.
     """
-
-    # Check if CDM file exists
-    if not cdm_device_path or not isinstance(cdm_device_path, (str, bytes, os.PathLike)) or not os.path.isfile(cdm_device_path):
-        console.print(f"[bold red] CDM file not found or invalid path: {cdm_device_path}[/bold red]")
-        return None
 
     # Check if PSSH is a valid base64 string
     try:
