@@ -243,9 +243,31 @@ def main(script_id = 0):
     search_functions = load_search_functions()
     logging.info(f"Load module in: {time.time() - start} s")
 
+    # Build dynamic help epilog with available sites
+    module_name_to_index_help = {}
+    for alias, (_func, _use_for) in search_functions.items():
+        module_name_help = alias.split("_")[0].lower()
+        try:
+            mod_help = importlib.import_module(f'StreamingCommunity.Api.Site.{module_name_help}')
+            module_index_help = int(getattr(mod_help, 'indice'))
+            module_name_to_index_help[module_name_help] = module_index_help
+        except Exception:
+            # If any error, skip adding to help mapping
+            continue
+
+    available_names_str = ", ".join(sorted(module_name_to_index_help.keys()))
+    available_indices_str = ", ".join(
+        [f"{idx}={name.capitalize()}" for name, idx in sorted(module_name_to_index_help.items(), key=lambda x: x[1])]
+    )
+
     # Create argument parser
     parser = argparse.ArgumentParser(
-        description='Script to download movies and series from the internet. Use these commands to configure the script and control its behavior.'
+        description='Script to download movies and series from the internet. Use these commands to configure the script and control its behavior.',
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog=(
+            "Available sites by name: " + available_names_str +
+            "\nAvailable sites by index: " + available_indices_str
+        )
     )
 
     parser.add_argument("script_id", nargs="?", default="unknown", help="ID dello script")
@@ -286,6 +308,14 @@ def main(script_id = 0):
 
     # Add arguments for search functions
     parser.add_argument('-s', '--search', default=None, help='Search terms')
+    parser.add_argument(
+        '--auto-first', action='store_true',
+        help='Automatically download the first search result. Use together with --site and --search.'
+    )
+    parser.add_argument(
+        '--site', type=str,
+        help='Select site by name (folder name, e.g. streamingcommunity) or by index as shown in the menu.'
+    )
     
     # Parse command-line arguments
     args = parser.parse_args()
@@ -322,6 +352,7 @@ def main(script_id = 0):
     # Create mappings using module indice
     input_to_function = {}
     choice_labels = {}
+    module_name_to_function = {}
     
     for alias, (func, use_for) in search_functions.items():
         module_name = alias.split("_")[0]
@@ -330,8 +361,52 @@ def main(script_id = 0):
             site_index = str(getattr(mod, 'indice'))
             input_to_function[site_index] = func
             choice_labels[site_index] = (module_name.capitalize(), use_for.lower())
+            module_name_to_function[module_name.lower()] = func
         except Exception as e:
             console.print(f"[red]Error mapping module {module_name}: {str(e)}")
+
+    # If a specific site is provided via CLI, run it directly
+    if args.site:
+        site_key = str(args.site).strip().lower()
+
+        func_to_run = None
+
+        # Allow selection by numeric index (indice)
+        if site_key in input_to_function:
+            func_to_run = input_to_function[site_key]
+
+        # Or by module (folder) name
+        if func_to_run is None and site_key in module_name_to_function:
+            func_to_run = module_name_to_function[site_key]
+
+        if func_to_run is not None:
+            # If auto-first is requested and search terms are provided, fetch first result and process directly
+            if args.auto_first:
+                if not search_terms:
+                    console.print("[red]--auto-first requires also --search to be provided.[/red]")
+                else:
+                    try:
+                        database = func_to_run(search_terms, get_onlyDatabase=True)
+                        if database and hasattr(database, 'media_list') and len(database.media_list) > 0:
+                            first_item = database.media_list[0]
+                            if hasattr(first_item, '__dict__'):
+                                item_dict = first_item.__dict__.copy()
+                            else:
+                                item_dict = {}
+                            func_to_run(direct_item=item_dict)
+                            return
+                        else:
+                            console.print("[yellow]No results found to auto-download. Falling back to interactive mode.[/yellow]")
+                    except Exception as e:
+                        console.print(f"[red]Auto-first failed:[/red] {str(e)}")
+
+            # Default behavior: run function (interactive selection will follow inside)
+            run_function(func_to_run, search_terms=search_terms)
+            return
+
+        # If site not found, show helpful message and fall back to interactive selection
+        available_sites = ", ".join(sorted({name for name in module_name_to_function.keys()}))
+        console.print(f"[red]Unknown site:[/red] '{args.site}'. Available sites by name: [yellow]{available_sites}[/yellow]")
 
     if args.category:
         selected_category = category_map.get(args.category)
