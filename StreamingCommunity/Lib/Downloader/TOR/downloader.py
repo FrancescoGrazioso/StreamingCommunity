@@ -356,10 +356,8 @@ class TOR_downloader:
                     
                     # Get download statistics
                     download_speed = torrent_info.dlspeed
-                    upload_speed = torrent_info.upspeed
                     total_size = torrent_info.size
                     downloaded_size = torrent_info.downloaded
-                    eta = torrent_info.eta  # eta in seconds
 
                     # Format sizes and speeds using the existing functions without modification
                     downloaded_size_str = internet_manager.format_file_size(downloaded_size)

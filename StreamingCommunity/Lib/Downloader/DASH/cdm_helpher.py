@@ -78,7 +78,6 @@ def get_widevine_keys(pssh, license_url, cdm_device_path, headers=None, payload=
                 try:
                     
                     # Try to decode as JSON only if plausible
-                    text = response.text
                     data = None
                     try:
                         data = response.json()

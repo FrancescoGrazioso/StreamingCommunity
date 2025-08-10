@@ -109,13 +109,12 @@ def join_video(video_path: str, out_path: str, codec: M3U8_Codec = None):
     if need_to_force_to_ts(video_path):
         #console.log("[red]Force input file to 'mpegts'.")
         ffmpeg_cmd.extend(['-f', 'mpegts'])
-        vcodec = "libx264"
 
     # Insert input video path
     ffmpeg_cmd.extend(['-i', video_path])
 
     # Add output Parameters
-    if USE_CODEC and codec != None:
+    if USE_CODEC and codec is not None:
         if USE_VCODEC:
             if codec.video_codec_name: 
                 if not USE_GPU: 
