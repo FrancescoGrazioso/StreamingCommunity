@@ -25,14 +25,12 @@ from StreamingCommunity.Util.message import start_message
 from StreamingCommunity.Util.config_json import config_manager
 from StreamingCommunity.Util.os import os_summary, internet_manager
 from StreamingCommunity.Util.logger import Logger
-from StreamingCommunity.Upload.update import update as git_update
 from StreamingCommunity.Lib.TMBD import tmdb
 from StreamingCommunity.TelegramHelp.telegram_bot import get_bot_instance, TelegramSession
 
 
 # Config
 SHOW_TRENDING = config_manager.get_bool('DEFAULT', 'show_trending')
-NOT_CLOSE_CONSOLE = config_manager.get_bool('DEFAULT', 'not_close')
 TELEGRAM_BOT = config_manager.get_bool('DEFAULT', 'telegram_bot')
 BYPASS_DNS = config_manager.get_bool('DEFAULT', 'bypass_dns')
 COLOR_MAP = {
@@ -380,8 +378,8 @@ def main(script_id=0):
         if TELEGRAM_BOT:
             get_bot_instance().send_message("Categoria non valida", None)
         console.print("[red]Invalid category.")
-        
-        if NOT_CLOSE_CONSOLE:
+
+        if getattr(args, 'not_close'):
             restart_script()
         else:
             force_exit()

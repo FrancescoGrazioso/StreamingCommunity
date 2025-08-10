@@ -2,8 +2,8 @@
 
 import logging
 
+
 # External libraries
-import httpx
 from bs4 import BeautifulSoup
 
 
@@ -24,23 +24,21 @@ max_timeout = config_manager.get_int("REQUESTS", "timeout")
 
 
 class ScrapSerie:
-    def __init__(self, url, full_url):
+    def __init__(self, url, site_url):
         """Initialize the ScrapSerie object with the provided URL and setup the HTTP client."""
         self.url = url
-        self.link = httpx.URL(url).path 
         self.session_id, self.csrf_token = get_session_and_csrf()
         self.client = create_client(
             cookies={"sessionId": self.session_id},
-            headers={"User-Agent": get_userAgent(), "csrf-token": self.csrf_token},
-            base_url=full_url
+            headers={"User-Agent": get_userAgent(), "csrf-token": self.csrf_token}
         )
 
         try:
-            self.response = self.client.get(self.link, timeout=max_timeout, follow_redirects=True)
+            self.response = self.client.get(self.url, timeout=max_timeout, follow_redirects=True)
             self.response.raise_for_status()
 
-        except Exception:
-            raise Exception("Failed to retrieve anime page.")
+        except Exception as e:
+            raise Exception(f"Failed to retrieve anime page: {str(e)}")
 
     def get_name(self):
         """Extract and return the name of the anime series."""

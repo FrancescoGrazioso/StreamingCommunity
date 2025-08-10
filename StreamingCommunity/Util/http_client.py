@@ -76,7 +76,6 @@ def create_client(
     *,
     headers: Optional[Dict[str, str]] = None,
     cookies: Optional[Dict[str, str]] = None,
-    base_url: Optional[str] = None,
     timeout: Optional[Union[int, float]] = None,
     verify: Optional[bool] = None,
     proxies: Optional[Dict[str, str]] = None,
@@ -87,12 +86,11 @@ def create_client(
     return httpx.Client(
         headers=_default_headers(headers),
         cookies=cookies,
-        base_url=base_url,
         timeout=timeout if timeout is not None else _get_timeout(),
         verify=_get_verify() if verify is None else verify,
         follow_redirects=follow_redirects,
         http2=http2,
-        proxies=proxies if proxies is not None else _get_proxies(),
+        proxy=proxies if proxies is not None else _get_proxies(),
     )
 
 
@@ -100,7 +98,6 @@ def create_async_client(
     *,
     headers: Optional[Dict[str, str]] = None,
     cookies: Optional[Dict[str, str]] = None,
-    base_url: Optional[str] = None,
     timeout: Optional[Union[int, float]] = None,
     verify: Optional[bool] = None,
     proxies: Optional[Dict[str, str]] = None,
@@ -111,7 +108,6 @@ def create_async_client(
     return httpx.AsyncClient(
         headers=_default_headers(headers),
         cookies=cookies,
-        base_url=base_url,
         timeout=timeout if timeout is not None else _get_timeout(),
         verify=_get_verify() if verify is None else verify,
         follow_redirects=follow_redirects,

@@ -116,14 +116,16 @@ def check_dns_resolution(domain):
         try:
             answers = resolver.resolve(domain, 'A')
             return str(answers[0])
-        except:
+        except Exception:
             try:
                 answers = resolver.resolve(domain, 'AAAA')
                 return str(answers[0])
-            except:
+            
+            except Exception:
                 pass
         return None
-    except:
+    
+    except Exception:
         return None
 
 def find_new_domain(input_url, output_file=None, verbose=True, json_output=False):
