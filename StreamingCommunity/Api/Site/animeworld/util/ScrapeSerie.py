@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 
 # Internal utilities
 from StreamingCommunity.Util.headers import get_userAgent
+from StreamingCommunity.Util.http_client import create_client
 from StreamingCommunity.Util.config_json import config_manager
 from StreamingCommunity.Util.os import os_manager
 
@@ -28,11 +29,10 @@ class ScrapSerie:
         self.url = url
         self.link = httpx.URL(url).path 
         self.session_id, self.csrf_token = get_session_and_csrf()
-        self.client = httpx.Client(
+        self.client = create_client(
             cookies={"sessionId": self.session_id},
             headers={"User-Agent": get_userAgent(), "csrf-token": self.csrf_token},
-            base_url=full_url,
-            verify=False
+            base_url=full_url
         )
 
         try:

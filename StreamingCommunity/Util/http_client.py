@@ -1,3 +1,5 @@
+# 09.08.25
+
 """
 Unified HTTP client utilities.
 
@@ -15,8 +17,12 @@ import time
 import random
 from typing import Any, Dict, Optional, Union
 
+
+# External library
 import httpx
 
+
+# Logic class
 from StreamingCommunity.Util.config_json import config_manager
 from StreamingCommunity.Util.headers import get_userAgent
 
@@ -209,5 +215,3 @@ async def async_fetch(
                 # Use same backoff logic for async by sleeping in thread (short duration)
                 _sleep_with_backoff(attempt)
         return None
-
-

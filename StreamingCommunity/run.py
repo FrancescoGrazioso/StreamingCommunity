@@ -115,10 +115,10 @@ def initialize():
         tmdb.display_trending_tv_shows()
     
     # Attempt GitHub update
-    try:
+    """try:
         git_update()
     except:
-        console.log("[red]Error with loading github.")
+        console.log("[red]Error with loading github.")"""
 
 
 def restart_script():
