@@ -463,5 +463,5 @@ class TOR_downloader:
         
         try:
             self.qb.auth_log_out()
-        except:
+        except Exception:
             pass

@@ -55,7 +55,9 @@ def download_film(select_title: MediaItem) -> str:
     ).start()
 
     if hls_process['error'] is not None:
-        try: os.remove(hls_process['path'])
-        except: pass
+        try: 
+            os.remove(hls_process['path'])
+        except Exception: 
+            pass
 
     return hls_process['path']

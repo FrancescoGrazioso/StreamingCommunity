@@ -70,8 +70,10 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
     ).start()
 
     if hls_process['error'] is not None:
-        try: os.remove(hls_process['path'])
-        except: pass
+        try: 
+            os.remove(hls_process['path'])
+        except Exception: 
+            pass
 
     return hls_process['path'], hls_process['stopped']
     

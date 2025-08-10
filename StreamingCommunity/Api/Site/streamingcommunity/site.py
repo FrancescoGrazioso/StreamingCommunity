@@ -57,7 +57,9 @@ def title_search(query: str) -> int:
         version = json.loads(soup.find('div', {'id': "app"}).get("data-page"))['version']
 
     except Exception as e:
-        if "WinError" in str(e) or "Errno" in str(e): console.print("\n[bold yellow]Please make sure you have enabled and configured a valid proxy.[/bold yellow]")
+        if "WinError" in str(e) or "Errno" in str(e): 
+            console.print("\n[bold yellow]Please make sure you have enabled and configured a valid proxy.[/bold yellow]")
+            
         console.print(f"[red]Site: {site_constant.SITE_NAME} version, request error: {e}")
         return 0
 
