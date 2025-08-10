@@ -46,7 +46,7 @@ def title_search(query: str) -> int:
         console.print(f"[bold red] CDM file not found or invalid path: {cdm_device_path}[/bold red]")
         return None
 
-    search_url = f'https://api-ott-prod-fe.mediaset.net/PROD/play/reco/account/v2.0'
+    search_url = 'https://api-ott-prod-fe.mediaset.net/PROD/play/reco/account/v2.0'
     console.print(f"[cyan]Search url: [yellow]{search_url}")
 
     params = {

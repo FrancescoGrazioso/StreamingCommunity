@@ -4,7 +4,6 @@ import logging
 
 
 # External libraries
-import httpx
 
 
 # Internal utilities

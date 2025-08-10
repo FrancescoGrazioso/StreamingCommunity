@@ -62,7 +62,7 @@ def title_search(query: str) -> int:
     media_search_manager.clear()
     table_show_manager.clear()
 
-    search_url = f"https://www.raiplay.it/atomatic/raiplay-search-service/api/v1/msearch"
+    search_url = "https://www.raiplay.it/atomatic/raiplay-search-service/api/v1/msearch"
     console.print(f"[cyan]Search url: [yellow]{search_url}")
 
     json_data = {

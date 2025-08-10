@@ -109,7 +109,7 @@ def download_series(select_title: MediaItem, season_selection: str = None, episo
     # Telegram bot integration
     if episode_selection is None:
         if site_constant.TELEGRAM_BOT:
-            console.print(f"\n[cyan]Insert media [red]index [yellow]or [red]* [cyan]to download all media [yellow]or [red]1-2 [cyan]or [red]3-* [cyan]for a range of media")
+            console.print("\n[cyan]Insert media [red]index [yellow]or [red]* [cyan]to download all media [yellow]or [red]1-2 [cyan]or [red]3-* [cyan]for a range of media")
             bot.send_message(f"Episodi trovati: {episoded_count}", None)
 
             last_command = bot.ask(
@@ -145,7 +145,7 @@ def download_series(select_title: MediaItem, season_selection: str = None, episo
             _, kill_handler = download_episode(i_episode-1, scrape_serie, video_source)
 
     if site_constant.TELEGRAM_BOT:
-        bot.send_message(f"Finito di scaricare tutte le serie e episodi", None)
+        bot.send_message("Finito di scaricare tutte le serie e episodi", None)
 
         # Get script_id
         script_id = TelegramSession.get_session()

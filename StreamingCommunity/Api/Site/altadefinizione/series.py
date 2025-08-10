@@ -196,7 +196,7 @@ def download_series(select_season: MediaItem, season_selection: str = None, epis
             download_episode(i_season, scrape_serie, download_all=False, episode_selection=episode_selection)
 
     if site_constant.TELEGRAM_BOT:
-        bot.send_message(f"Finito di scaricare tutte le serie e episodi", None)
+        bot.send_message("Finito di scaricare tutte le serie e episodi", None)
 
         # Get script_id
         script_id = TelegramSession.get_session()

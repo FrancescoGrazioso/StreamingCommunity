@@ -1,8 +1,5 @@
 # 19.06.24
 
-import sys
-
-
 # External library
 from rich.console import Console
 

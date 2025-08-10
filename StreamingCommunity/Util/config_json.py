@@ -67,7 +67,7 @@ class ConfigManager:
         """Load the configuration and initialize all settings."""
         if not os.path.exists(self.file_path):
             console.print(f"[bold red]WARNING: Configuration file not found:[/bold red] {self.file_path}")
-            console.print(f"[bold yellow]Attempting to download from reference repository...[/bold yellow]")
+            console.print("[bold yellow]Attempting to download from reference repository...[/bold yellow]")
             self._download_reference_config()
         
         # Load the configuration file
@@ -159,7 +159,7 @@ class ConfigManager:
         """Validate the local configuration against the reference one and update missing keys."""
         try:
             # Download the reference configuration
-            console.print(f"[bold cyan]Validating configuration with GitHub...[/bold cyan]")
+            console.print("[bold cyan]Validating configuration with GitHub...[/bold cyan]")
             response = requests.get(self.reference_config_url, timeout=8, headers={'User-Agent': get_userAgent()})
             
             if not response.ok:

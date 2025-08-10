@@ -167,7 +167,7 @@ def get_tracking_info(BEARER_TOKEN, PLAYBACK_JSON):
         results = parse_smil_for_tracking_and_video(smil_xml)
         return results
     
-    except Exception as e:
+    except Exception:
         return None
 
 def generate_license_url(BEARER_TOKEN, tracking_info):

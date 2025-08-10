@@ -48,7 +48,7 @@ def title_search(query: str) -> int:
         return None
 
     # Build new Crunchyroll API search URL
-    api_url = f"https://www.crunchyroll.com/content/v2/discover/search"
+    api_url = "https://www.crunchyroll.com/content/v2/discover/search"
 
     params = {
         "q": query,

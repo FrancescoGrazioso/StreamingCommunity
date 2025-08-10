@@ -10,7 +10,6 @@ from functools import partial
 
 
 # External libraries
-import httpx
 from tqdm import tqdm
 from rich.console import Console
 from rich.prompt import Prompt
@@ -84,7 +83,7 @@ def MP4_downloader(url: str, path: str, referer: str = None, headers_: dict = No
     if os.path.exists(path):
         console.log("[red]Output file already exists.")
         if TELEGRAM_BOT:
-            bot.send_message(f"Contenuto già scaricato!", None)
+            bot.send_message("Contenuto già scaricato!", None)
         return None, False
 
     if not (url.lower().startswith('http://') or url.lower().startswith('https://')):

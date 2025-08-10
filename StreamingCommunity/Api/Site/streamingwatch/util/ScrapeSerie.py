@@ -5,7 +5,6 @@ import logging
 
 
 # External libraries
-import httpx
 from bs4 import BeautifulSoup
 
 

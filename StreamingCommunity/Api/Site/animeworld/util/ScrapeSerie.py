@@ -40,7 +40,7 @@ class ScrapSerie:
             self.response.raise_for_status()
 
         except:
-            raise Exception(f"Failed to retrieve anime page.")
+            raise Exception("Failed to retrieve anime page.")
 
     def get_name(self):
         """Extract and return the name of the anime series."""

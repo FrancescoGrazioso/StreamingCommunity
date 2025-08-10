@@ -420,7 +420,7 @@ class HLS_Downloader:
                 - is_master: Whether the M3U8 was a master playlist
             Or raises an exception if there's an error
         """
-        console.print(f"[cyan]You can safely stop the download with [bold]Ctrl+c[bold] [cyan] \n")
+        console.print("[cyan]You can safely stop the download with [bold]Ctrl+c[bold] [cyan] \n")
         
         if TELEGRAM_BOT:
             bot = get_bot_instance()
@@ -437,7 +437,7 @@ class HLS_Downloader:
                     'stopped': False
                 }
                 if TELEGRAM_BOT:
-                    bot.send_message(f"Contenuto già scaricato!", None)
+                    bot.send_message("Contenuto già scaricato!", None)
                 return response
         
             self.path_manager.setup_directories()

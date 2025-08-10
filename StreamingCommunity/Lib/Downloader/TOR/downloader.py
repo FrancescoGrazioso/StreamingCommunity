@@ -229,7 +229,7 @@ class TOR_downloader:
                 torrent_info.num_seeds == 0 and
                 torrent_info.state in ('stalledDL', 'missingFiles', 'error')):
                 
-                self.console.print(f"[bold red]Torrent not downloadable. No seeds or peers available. Removing...[/bold red]")
+                self.console.print("[bold red]Torrent not downloadable. No seeds or peers available. Removing...[/bold red]")
                 self._remove_torrent(self.latest_torrent_hash)
                 self.latest_torrent_hash = None
                 return False
@@ -250,7 +250,7 @@ class TOR_downloader:
         """
         try:
             self.qb.torrents_delete(delete_files=delete_files, torrent_hashes=torrent_hash)
-            self.console.print(f"[yellow]Torrent removed from client[/yellow]")
+            self.console.print("[yellow]Torrent removed from client[/yellow]")
         except Exception as e:
             logging.error(f"Error removing torrent: {str(e)}")
     
