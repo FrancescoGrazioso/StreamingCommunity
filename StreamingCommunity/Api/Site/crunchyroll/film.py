@@ -76,7 +76,9 @@ def download_film(select_title: MediaItem) -> str:
     status = dash_process.get_status()
 
     if status['error'] is not None and status['path']:
-        try: os.remove(status['path'])
-        except Exception: pass
+        try: 
+            os.remove(status['path'])
+        except Exception: 
+            pass
 
     return status['path'], status['stopped']

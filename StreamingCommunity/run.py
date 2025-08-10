@@ -117,8 +117,8 @@ def initialize():
     # Attempt GitHub update
     try:
         git_update()
-    except:
-        console.log("[red]Error with loading github.")
+    except Exception as e:
+        console.log(f"[red]Error with loading github: {str(e)}")
 
 
 def restart_script():

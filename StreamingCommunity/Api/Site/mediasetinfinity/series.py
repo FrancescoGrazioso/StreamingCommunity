@@ -87,8 +87,10 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
     status = dash_process.get_status()
 
     if status['error'] is not None and status['path']:
-        try: os.remove(status['path'])
-        except Exception: pass
+        try: 
+            os.remove(status['path'])
+        except Exception: 
+            pass
 
     return status['path'], status['stopped']
     

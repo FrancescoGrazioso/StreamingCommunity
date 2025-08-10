@@ -93,8 +93,10 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
     status = dash_process.get_status()
 
     if status['error'] is not None and status['path']:
-        try: os.remove(status['path'])
-        except Exception: pass
+        try: 
+            os.remove(status['path'])
+        except Exception: 
+            pass
 
     # Delete episode stream
     delete_stream_episode(url_id, query_params['playbackGuid'][0], mpd_headers)
