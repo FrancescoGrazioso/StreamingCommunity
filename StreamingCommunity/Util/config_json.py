@@ -412,23 +412,28 @@ class ConfigManager:
             Any: Converted value
         """
         try:
-            if data_type == int:
+            if data_type is int:
                 return int(value)
-            elif data_type == float:
+            
+            elif data_type is float:
                 return float(value)
-            elif data_type == bool:
+            
+            elif data_type is bool:
                 if isinstance(value, str):
                     return value.lower() in ("yes", "true", "t", "1")
                 return bool(value)
-            elif data_type == list:
+            
+            elif data_type is list:
                 if isinstance(value, list):
                     return value
                 if isinstance(value, str):
                     return [item.strip() for item in value.split(',')]
                 return [value]
-            elif data_type == dict:
+
+            elif data_type is dict:
                 if isinstance(value, dict):
                     return value
+                
                 raise ValueError(f"Cannot convert {type(value).__name__} to dict")
             else:
                 return value

@@ -39,7 +39,7 @@ class ScrapSerie:
             self.response = self.client.get(self.link, timeout=max_timeout, follow_redirects=True)
             self.response.raise_for_status()
 
-        except:
+        except Exception:
             raise Exception("Failed to retrieve anime page.")
 
     def get_name(self):

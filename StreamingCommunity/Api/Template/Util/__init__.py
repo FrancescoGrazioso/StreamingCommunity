@@ -8,3 +8,12 @@ from .manage_ep import (
     dynamic_format_number,
     display_episodes_list
 )
+
+__all__ = [
+    "manage_selection",
+    "map_episode_title",
+    "validate_episode_selection",
+    "validate_selection",
+    "dynamic_format_number",
+    "display_episodes_list"
+]

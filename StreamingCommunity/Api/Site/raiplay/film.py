@@ -90,7 +90,7 @@ def download_film(select_title: MediaItem) -> Tuple[str, bool]:
     if r_proc['error'] is not None:
         try: 
             os.remove(r_proc['path'])
-        except: 
+        except Exception: 
             pass
 
     return r_proc['path'], r_proc['stopped']

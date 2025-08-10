@@ -1,7 +1,5 @@
 # 16.03.25
 
-import sys
-import subprocess
 from urllib.parse import quote_plus
 
 

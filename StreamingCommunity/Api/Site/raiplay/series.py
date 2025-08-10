@@ -101,7 +101,7 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
     if r_proc['error'] is not None:
         try: 
             os.remove(r_proc['path'])
-        except: 
+        except Exception: 
             pass
 
     return r_proc['path'], r_proc['stopped']
