@@ -26,6 +26,7 @@ from StreamingCommunity.Util.config_json import config_manager
 from StreamingCommunity.Util.os import os_summary, internet_manager
 from StreamingCommunity.Util.logger import Logger
 from StreamingCommunity.Lib.TMBD import tmdb
+from StreamingCommunity.Upload.update import update as git_update
 from StreamingCommunity.TelegramHelp.telegram_bot import get_bot_instance, TelegramSession
 
 

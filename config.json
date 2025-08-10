@@ -1,9 +1,9 @@
 {
     "DEFAULT": {
         "debug": false,
-        "show_message": false,
-        "show_trending": false,
-        "fetch_domain_online": false,
+        "show_message": true,
+        "show_trending": true,
+        "fetch_domain_online": true,
         "telegram_bot": false,
         "validate_github_config": false,
         "bypass_dns": false
