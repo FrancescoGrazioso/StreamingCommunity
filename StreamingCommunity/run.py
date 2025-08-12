@@ -243,8 +243,16 @@ def execute_hooks(stage: str) -> None:
             stderr = (result.stderr or '').strip()
             if stdout:
                 logging.info(f"Hook '{name}' stdout: {stdout}")
+                try:
+                    console.print(f"[cyan][hook:{name} stdout][/cyan]\n{stdout}")
+                except Exception:
+                    pass
             if stderr:
                 logging.warning(f"Hook '{name}' stderr: {stderr}")
+                try:
+                    console.print(f"[yellow][hook:{name} stderr][/yellow]\n{stderr}")
+                except Exception:
+                    pass
 
             if result.returncode != 0:
                 message = f"Hook '{name}' exited with code {result.returncode}"
@@ -496,9 +504,8 @@ def main(script_id=0):
 
     start = time.time()
     Logger()
-    initialize()
-
     execute_hooks('pre_run')
+    initialize()
 
     try:
         check_dns_and_exit_if_needed()
