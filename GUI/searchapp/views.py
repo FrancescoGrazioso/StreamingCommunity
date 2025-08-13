@@ -230,8 +230,8 @@ def series_metadata(request: HttpRequest) -> JsonResponse:
         site = (source_alias.split("_")[0] if source_alias else "").lower()
         media_type = (item_payload.get("type") or item_payload.get("media_type") or "").lower()
 
-        # Films: no seasons/episodes
-        if media_type in ("film", "movie"):
+        # Films and OVA: no seasons/episodes
+        if media_type in ("film", "movie", "ova"):
             return JsonResponse({
                 "isSeries": False,
                 "seasonsCount": 0,
@@ -357,8 +357,10 @@ def start_download(request: HttpRequest) -> HttpResponse:
         or "contenuto selezionato"
     )
 
-    # Per animeunity, se non specificato, scarica tutti gli episodi evitando prompt
-    if site == "animeunity" and not episode:
+    # Per animeunity, se non specificato e se non è un contenuto non seriale (film/ova),
+    # scarica tutti gli episodi evitando prompt
+    media_type = (item_payload.get("type") or item_payload.get("media_type") or "").lower()
+    if site == "animeunity" and not episode and media_type not in ("film", "movie", "ova"):
         episode = "*"
 
     _run_download_in_thread(site, item_payload, season, episode)

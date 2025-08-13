@@ -28,6 +28,18 @@ class SeriesMetadataViewTests(TestCase):
         self.assertEqual(data.get("seasonsCount"), 0)
         self.assertEqual(data.get("episodesPerSeason"), {})
 
+    def test_ova_returns_no_series(self):
+        payload = {"type": "OVA"}
+        resp = self.post_json({
+            "source_alias": "animeunity",
+            "item_payload": payload
+        })
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertFalse(data.get("isSeries"))
+        self.assertEqual(data.get("seasonsCount"), 0)
+        self.assertEqual(data.get("episodesPerSeason"), {})
+
     def test_unknown_site_returns_default(self):
         payload = {"type": "series"}
         resp = self.post_json({

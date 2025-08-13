@@ -354,7 +354,7 @@
 
         const payload = (()=>{ try { return JSON.parse(form.querySelector('input[name="item_payload"]').value) } catch { return {} }})();
         const type = (payload.type || payload.media_type || '').toLowerCase();
-        if (type === 'film' || type === 'movie') {
+        if (type === 'film' || type === 'movie' || type === 'ova') {
           comboWrapper.classList.add('hidden');
           hiddenSeason.value = '';
           hiddenEpisode.value = '';
