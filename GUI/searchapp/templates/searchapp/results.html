@@ -25,9 +25,9 @@
               '100%': { transform: 'translateY(0)', opacity: '1' },
             },
             bounceIn: {
-              '0%': { transform: 'scale(0.3)', opacity: '0' },
-              '50%': { transform: 'scale(1.05)' },
-              '70%': { transform: 'scale(0.9)' },
+              '0%': { transform: 'scale(1)', opacity: '0' },
+              '50%': { transform: 'scale(1.01)' },
+              '70%': { transform: 'scale(0.99)' },
               '100%': { transform: 'scale(1)', opacity: '1' },
             }
           }
@@ -281,6 +281,21 @@
       background-color: #ffffff !important;
       color: #111827 !important;
       border-color: #d1d5db !important;
+    }
+    
+    /* Force black text for season/episode selects (requested) */
+    /* always comment in english */
+    .combo-wrapper select.season-from,
+    .combo-wrapper select.season-to,
+    .combo-wrapper select.episode-from,
+    .combo-wrapper select.episode-to {
+      color: #111827 !important;
+    }
+    .combo-wrapper select.season-from option,
+    .combo-wrapper select.season-to option,
+    .combo-wrapper select.episode-from option,
+    .combo-wrapper select.episode-to option {
+      color: #111827 !important;
     }
     
     /* Smooth scrolling */
