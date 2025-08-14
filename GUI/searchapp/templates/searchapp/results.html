@@ -380,11 +380,10 @@
 
         fetchMetadata(form).then(data => {
           if (!data || data.error) {
-            // fallback: only episodes without bounds
-            seasonRange?.classList.add('hidden');
-            episodeRange?.classList.remove('hidden');
-            populateSelect(episodeFrom, 1, 100);
-            populateSelect(episodeTo, 1, 100);
+            // metadata failure: hide selection entirely and force full download
+            comboWrapper?.classList.add('hidden');
+            if (hiddenSeason) hiddenSeason.value = '*';
+            if (hiddenEpisode) hiddenEpisode.value = '*';
             return;
           }
 
@@ -392,11 +391,13 @@
           const epsMap = data.episodesPerSeason || {};
 
           if (seasonsCount <= 1) {
+            // Single-season series: show only episode range, set season=1
             seasonRange?.classList.add('hidden');
             episodeRange?.classList.remove('hidden');
             const maxEp = epsMap[1] || 100;
             populateSelect(episodeFrom, 1, Math.max(1, maxEp));
             populateSelect(episodeTo, 1, Math.max(1, maxEp));
+            if (hiddenSeason) hiddenSeason.value = '1';
           } else {
             seasonRange?.classList.remove('hidden');
             episodeRange?.classList.remove('hidden');
