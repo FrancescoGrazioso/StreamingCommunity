@@ -187,7 +187,10 @@ def search(request: HttpRequest) -> HttpResponse:
 
 
 def _run_download_in_thread(
-    site: str, item_payload: Dict[str, Any], season: Optional[str], episode: Optional[str]
+    site: str,
+    item_payload: Dict[str, Any],
+    season: Optional[str],
+    episode: Optional[str],
 ) -> None:
     def _task():
         try:
@@ -228,15 +231,15 @@ def series_metadata(request: HttpRequest) -> JsonResponse:
             return JsonResponse({"error": "Parametri mancanti"}, status=400)
 
         site = (source_alias.split("_")[0] if source_alias else "").lower()
-        media_type = (item_payload.get("type") or item_payload.get("media_type") or "").lower()
+        media_type = (
+            item_payload.get("type") or item_payload.get("media_type") or ""
+        ).lower()
 
         # Films and OVA: no seasons/episodes
         if media_type in ("film", "movie", "ova"):
-            return JsonResponse({
-                "isSeries": False,
-                "seasonsCount": 0,
-                "episodesPerSeason": {}
-            })
+            return JsonResponse(
+                {"isSeries": False, "seasonsCount": 0, "episodesPerSeason": {}}
+            )
 
         # Guard rail: require id and slug where needed
         media_id = item_payload.get("id")
@@ -245,6 +248,7 @@ def series_metadata(request: HttpRequest) -> JsonResponse:
         if site == "streamingcommunity":
             # Lazy import to avoid loading heavy package during tests unless needed
             import importlib
+
             try:
                 scrape_mod = importlib.import_module(
                     "StreamingCommunity.Api.Site.streamingcommunity.util.ScrapeSerie"
@@ -257,7 +261,10 @@ def series_metadata(request: HttpRequest) -> JsonResponse:
             base_url = ""
             try:
                 from StreamingCommunity.Util.config_json import config_manager
-                base_url = (config_manager.get_site("streamingcommunity", "full_url") or "").rstrip("/")
+
+                base_url = (
+                    config_manager.get_site("streamingcommunity", "full_url") or ""
+                ).rstrip("/")
             except Exception:
                 base_url = ""
 
@@ -271,14 +278,17 @@ def series_metadata(request: HttpRequest) -> JsonResponse:
                 except Exception:
                     episodes_per_season[season_number] = 0
 
-            return JsonResponse({
-                "isSeries": True,
-                "seasonsCount": seasons_count or 0,
-                "episodesPerSeason": episodes_per_season,
-            })
+            return JsonResponse(
+                {
+                    "isSeries": True,
+                    "seasonsCount": seasons_count or 0,
+                    "episodesPerSeason": episodes_per_season,
+                }
+            )
 
         if site == "animeunity":
             import importlib
+
             try:
                 scrape_mod = importlib.import_module(
                     "StreamingCommunity.Api.Site.animeunity.util.ScrapeSerie"
@@ -291,7 +301,10 @@ def series_metadata(request: HttpRequest) -> JsonResponse:
             base_url = ""
             try:
                 from StreamingCommunity.Util.config_json import config_manager
-                base_url = (config_manager.get_site("animeunity", "full_url") or "").rstrip("/")
+
+                base_url = (
+                    config_manager.get_site("animeunity", "full_url") or ""
+                ).rstrip("/")
             except Exception:
                 base_url = ""
 
@@ -307,20 +320,21 @@ def series_metadata(request: HttpRequest) -> JsonResponse:
             except Exception:
                 episodes_count = None
 
-            return JsonResponse({
-                "isSeries": True,
-                "seasonsCount": 1,
-                "episodesPerSeason": {1: (episodes_count or 0)}
-            })
+            return JsonResponse(
+                {
+                    "isSeries": True,
+                    "seasonsCount": 1,
+                    "episodesPerSeason": {1: (episodes_count or 0)},
+                }
+            )
 
         # Default: unknown site treated as no metadata
-        return JsonResponse({
-            "isSeries": False,
-            "seasonsCount": 0,
-            "episodesPerSeason": {}
-        })
+        return JsonResponse(
+            {"isSeries": False, "seasonsCount": 0, "episodesPerSeason": {}}
+        )
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
 
 @require_http_methods(["POST"])
 def start_download(request: HttpRequest) -> HttpResponse:
@@ -359,8 +373,14 @@ def start_download(request: HttpRequest) -> HttpResponse:
 
     # Per animeunity, se non specificato e se non è un contenuto non seriale (film/ova),
     # scarica tutti gli episodi evitando prompt
-    media_type = (item_payload.get("type") or item_payload.get("media_type") or "").lower()
-    if site == "animeunity" and not episode and media_type not in ("film", "movie", "ova"):
+    media_type = (
+        item_payload.get("type") or item_payload.get("media_type") or ""
+    ).lower()
+    if (
+        site == "animeunity"
+        and not episode
+        and media_type not in ("film", "movie", "ova")
+    ):
         episode = "*"
 
     _run_download_in_thread(site, item_payload, season, episode)
