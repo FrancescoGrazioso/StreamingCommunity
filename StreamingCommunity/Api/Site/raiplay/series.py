@@ -107,31 +107,6 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
         # Get final output path and status
         r_proc = dash_process.get_status()
 
-    # MPD
-    else:
-
-        # Check CDM file before usage
-        cdm_device_path = get_wvd_path()
-        if not cdm_device_path or not isinstance(cdm_device_path, (str, bytes, os.PathLike)) or not os.path.isfile(cdm_device_path):
-            console.print(f"[bold red] CDM file not found or invalid path: {cdm_device_path}[/bold red]")
-            return None
-
-        license_url = generate_license_url(obj_episode.mpd_id)
-
-        dash_process = DASH_Downloader(
-            cdm_device=cdm_device_path,
-            license_url=license_url,
-            mpd_url=master_playlist,
-            output_path=os.path.join(mp4_path, mp4_name),
-        )
-        dash_process.parse_manifest(custom_headers=get_headers())
-        
-        if dash_process.download_and_decrypt():
-            dash_process.finalize_output()
-
-        # Get final output path and status
-        r_proc = dash_process.get_status()
-
     if r_proc['error'] is not None:
         try: 
             os.remove(r_proc['path'])

@@ -163,7 +163,6 @@ def get_tracking_info(BEARER_TOKEN, PLAYBACK_JSON):
         return results
     
     except Exception:
-    except Exception:
         return None
 
 def generate_license_url(BEARER_TOKEN, tracking_info):

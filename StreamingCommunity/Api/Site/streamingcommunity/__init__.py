@@ -19,11 +19,11 @@ from StreamingCommunity.TelegramHelp.telegram_bot import get_bot_instance
 from .site import title_search, table_show_manager, media_search_manager
 from .film import download_film
 from .series import download_series
-from .util.ScrapeSerie import GetSerieInfo
+
 
 # Variable
 indice = 0
-_useFor = "Film_&_Serie" # "Movies_&_Series"
+_useFor = "Film_&_Serie"
 _priority = 0
 _engineDownload = "hls"
 _deprecate = False
