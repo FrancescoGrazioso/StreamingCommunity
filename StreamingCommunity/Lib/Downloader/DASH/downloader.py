@@ -11,12 +11,8 @@ from rich.panel import Panel
 
 # Internal utilities
 from StreamingCommunity.Util.config_json import config_manager
-from StreamingCommunity.Util.os import os_manager, internet_manager
-from ...FFmpeg import (
-    print_duration_table,
-    join_video,
-    join_audios
-)
+from StreamingCommunity.Util.os import internet_manager
+from ...FFmpeg import print_duration_table
 
 
 # Logic class
@@ -116,7 +112,7 @@ class DASH_Downloader:
         )
 
         if not keys:
-            console.print(f"[red]No keys found, cannot proceed with download.[/red]")
+            console.print("[red]No keys found, cannot proceed with download.[/red]")
             return False
 
         # Extract the first key for decryption
@@ -177,8 +173,6 @@ class DASH_Downloader:
         pass
 
     def finalize_output(self):
-        video_file = os.path.join(self.decrypted_dir, "video.mp4")
-        audio_file = os.path.join(self.decrypted_dir, "audio.mp4")
 
         # Use the original output path for the final file
         output_file = self.original_output_path
@@ -187,16 +181,17 @@ class DASH_Downloader:
         self.output_file = output_file
         use_shortest = False
 
-        if os.path.exists(video_file) and os.path.exists(audio_file):
+        """if os.path.exists(video_file) and os.path.exists(audio_file):
             audio_tracks = [{"path": audio_file}]
             out_audio_path, use_shortest = join_audios(video_file, audio_tracks, output_file)
 
         elif os.path.exists(video_file):
             out_video_path = join_video(video_file, output_file, codec=None)
-            
+        
         else:
             print("Video file missing, cannot export")
             return None
+        """
 
         # Handle failed sync case
         if use_shortest:
