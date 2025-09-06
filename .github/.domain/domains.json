@@ -1,9 +1,9 @@
 {
   "cb01new": {
-    "domain": "quest",
-    "full_url": "https://cb01net.quest/",
-    "old_domain": "pics",
-    "time_change": "2025-09-01 20:20:23"
+    "domain": "cam",
+    "full_url": "https://cb01net.cam/",
+    "old_domain": "monster",
+    "time_change": "2025-11-11 07:07:02"
   },
   "animeunity": {
     "domain": "so",
@@ -18,10 +18,10 @@
     "time_change": "2025-03-21 12:20:27"
   },
   "guardaserie": {
-    "domain": "sale",
-    "full_url": "https://guardaserietv.sale/",
-    "old_domain": "app",
-    "time_change": "2025-08-20 07:20:06"
+    "domain": "wiki",
+    "full_url": "https://guardaserietv.wiki/",
+    "old_domain": "xyz",
+    "time_change": "2025-11-10 18:08:37"
   },
   "streamingwatch": {
     "domain": "org",
@@ -30,21 +30,21 @@
     "time_change": "2025-04-29 12:30:30"
   },
   "altadefinizione": {
-    "domain": "center",
-    "full_url": "https://altadefinizionegratis.center/",
-    "old_domain": "free",
-    "time_change": "2025-09-04 14:18:54"
+    "domain": "news",
+    "full_url": "https://altadefinizionegratis.news/",
+    "old_domain": "ist",
+    "time_change": "2025-11-11 15:06:53"
   },
   "streamingcommunity": {
-    "domain": "bid",
-    "full_url": "https://streamingcommunityz.bid/",
-    "old_domain": "chat",
-    "time_change": "2025-09-01 15:20:03"
+    "domain": "bet",
+    "full_url": "https://streamingcommunityz.bet/",
+    "old_domain": "center",
+    "time_change": "2025-11-13 17:07:16"
   },
   "altadefinizionegratis": {
-    "domain": "center",
-    "full_url": "https://altadefinizionegratis.center/",
-    "old_domain": "cool",
-    "time_change": "2025-08-25 18:30:42"
+    "domain": "news",
+    "full_url": "https://altadefinizionegratis.news/",
+    "old_domain": "ist",
+    "time_change": "2025-11-11 15:06:56"
   }
 }
