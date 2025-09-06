@@ -249,7 +249,7 @@ class M3U8_Segments:
                 self.info_nRetry += 1
 
                 if attempt + 1 == REQUEST_MAX_RETRY:
-                    console.log(f"[red]Final retry failed for segment: {index}")
+                    console.print(f"[red]Final retry failed for segment: {index}")
                     self.queue.put((index, None))  # Marker for failed segment
                     progress_bar.update(1)
                     self.info_nFailed += 1
