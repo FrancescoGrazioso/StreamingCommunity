@@ -15,10 +15,6 @@ from StreamingCommunity.Util.config_json import config_manager
 from StreamingCommunity.Api.Player.Helper.Vixcloud.util import SeasonManager
 
 
-# Logic class
-from .get_license import get_bearer_token
-
-
 # Variable
 max_timeout = config_manager.get_int("REQUESTS", "timeout")
 
