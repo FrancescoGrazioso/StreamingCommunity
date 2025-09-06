@@ -11,7 +11,6 @@ from datetime import datetime
 # External library
 import httpx
 from rich.console import Console
-from rich.prompt import Prompt
 from rich.panel import Panel
 from rich.table import Table
 
