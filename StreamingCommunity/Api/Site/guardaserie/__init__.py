@@ -1,5 +1,7 @@
 # 09.06.24
 
+import sys
+import subprocess
 from urllib.parse import quote_plus
 
 
@@ -77,6 +79,9 @@ def process_search_result(select_title, selections=None):
         select_title (MediaItem): The selected media item
         selections (dict, optional): Dictionary containing selection inputs that bypass manual input
                                     {'season': season_selection, 'episode': episode_selection}
+
+    Returns:
+        bool: True if processing was successful, False otherwise
     """
     if not select_title:
         if site_constant.TELEGRAM_BOT:
@@ -84,7 +89,7 @@ def process_search_result(select_title, selections=None):
             bot.send_message("No title selected or selection cancelled.", None)
         else:
             console.print("[yellow]No title selected or selection cancelled.")
-        return
+        return False
     
     season_selection = None
     episode_selection = None
@@ -94,6 +99,7 @@ def process_search_result(select_title, selections=None):
         episode_selection = selections.get('episode')
         
     download_series(select_title, season_selection, episode_selection)
+    return True
 
 def search(string_to_search: str = None, get_onlyDatabase: bool = False, direct_item: dict = None, selections: dict = None):
     """

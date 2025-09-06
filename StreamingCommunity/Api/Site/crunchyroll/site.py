@@ -50,7 +50,7 @@ def title_search(query: str) -> int:
 
     # Check if x_cr_tab_id or etp_rt is present
     if config_manager.get_dict("SITE_LOGIN", "crunchyroll")['x_cr_tab_id'] is None or config_manager.get_dict("SITE_LOGIN", "crunchyroll")['x_cr_tab_id'] == "" or config_manager.get_dict("SITE_LOGIN", "crunchyroll")['etp_rt'] is None or config_manager.get_dict("SITE_LOGIN", "crunchyroll")['etp_rt'] == "":
-        console.print(f"[bold red] x_cr_tab_id or etp_rt is missing or empty.[/bold red]")
+        console.print("[bold red] x_cr_tab_id or etp_rt is missing or empty.[/bold red]")
         sys.exit(0)
 
     # Build new Crunchyroll API search URL

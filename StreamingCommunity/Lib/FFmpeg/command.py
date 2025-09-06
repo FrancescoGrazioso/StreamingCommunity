@@ -219,7 +219,7 @@ def join_audios(video_path: str, audio_tracks: List[Dict[str, str]], out_path: s
         
         if diff > 0.5:
             use_shortest = True
-            logging.warning(f"[15:02:43] Warning: Some audio tracks have duration differences (>0.5s)")
+            console.log("[red]Warning: Some audio tracks have duration differences (>0.5s)")
 
     # Print duration differences for each track
     if use_shortest:
