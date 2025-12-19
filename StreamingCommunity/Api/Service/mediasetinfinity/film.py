@@ -40,8 +40,8 @@ def download_film(select_title: MediaItem) -> Tuple[str, bool]:
     console.print(f"\n[yellow]Download: [red]{site_constants.SITE_NAME} → [cyan]{select_title.name} \n")
 
     # Define the filename and path for the downloaded film
-    title_name = os_manager.get_sanitize_file(select_title.name, select_title.date) + extension_output
-    mp4_path = os.path.join(site_constants.MOVIE_FOLDER, title_name.replace(extension_output, ""))
+    mp4_name = f"{os_manager.get_sanitize_file(select_title.name, select_title.date)}.{extension_output}"
+    mp4_path = os.path.join(site_constants.MOVIE_FOLDER, mp4_name.replace(f".{extension_output}", ""))
 
     # Get playback URL and tracking info
     playback_json = get_playback_url(select_title.id)
@@ -54,7 +54,7 @@ def download_film(select_title: MediaItem) -> Tuple[str, bool]:
     dash_process =  DASH_Downloader(
         license_url=license_url,
         mpd_url=mpd_url,
-        output_path=os.path.join(mp4_path, title_name),
+        output_path=os.path.join(mp4_path, mp4_name),
     )
     dash_process.parse_manifest(custom_headers=get_headers())
 

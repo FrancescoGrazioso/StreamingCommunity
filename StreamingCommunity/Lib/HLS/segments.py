@@ -176,7 +176,7 @@ class M3U8_Segments:
             response.raise_for_status()
             
             self.parse_data(response.text)
-            with open(os.path.join(self.tmp_folder, "playlist.m3u8"), "w") as f:
+            with open(os.path.join(self.tmp_folder, "playlist.m3u8"), "w", encoding='utf-8') as f:
                 f.write(response.text)
                     
     def _throttled_progress_update(self, content_size: int, progress_bar: tqdm):
@@ -467,7 +467,10 @@ class M3U8_Segments:
             
             # NOT DRM
             else:
-                #print(self.segment_init_url, self.segments[0])
+                if len(self.segments) == 0:
+                    console.print("[red]No segments found to download.")
+                    return self._generate_results(type)
+                
                 decrypted_file, kill = MP4_Downloader(
                     url = self.segments[0],
                     path=os.path.join(self.tmp_folder, f"{type}_decrypted.mp4"),

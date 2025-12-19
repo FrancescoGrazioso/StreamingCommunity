@@ -124,7 +124,6 @@ def MP4_Downloader(url: str, path: str, referer: str = None, headers_: dict = No
                     return None, False
 
                 # Create progress bar with percentage instead of n_fmt/total_fmt
-                print("")
                 progress_bar = tqdm(
                     total=total,
                     ascii='░▒█',
@@ -183,7 +182,6 @@ def MP4_Downloader(url: str, path: str, referer: str = None, headers_: dict = No
             return None, interrupt_handler.kill_download
 
     except Exception as e:
-        logging.error(f"Unexpected error: {e}")
         console.print(f"[red]Unexpected Error: {e}")
         if os.path.exists(temp_path):
             os.remove(temp_path)

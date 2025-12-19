@@ -43,8 +43,8 @@ def download_film(select_title: MediaItem) -> str:
         return None, True
 
     # Define filename and path for the downloaded video
-    mp4_name = os_manager.get_sanitize_file(select_title.name, select_title.date) + extension_output
-    mp4_path = os.path.join(site_constants.MOVIE_FOLDER, mp4_name.replace(extension_output, ""))
+    mp4_name = f"{os_manager.get_sanitize_file(select_title.name, select_title.date)}.{extension_output}"
+    mp4_path = os.path.join(site_constants.MOVIE_FOLDER, mp4_name.replace(f".{extension_output}", ""))
 
     # Generate mpd and license URLs
     url_id = select_title.get('url').split('/')[-1]

@@ -144,7 +144,6 @@ class MPD_Segments:
             worker_type = 'video' if 'Video' in description else 'audio'
             concurrent_downloads = self._get_worker_count(worker_type)
 
-        print("")
         progress_bar = tqdm(
             total=len(segment_urls) + 1,
             desc=f"Downloading {rep_id}",

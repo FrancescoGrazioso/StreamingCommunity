@@ -56,8 +56,8 @@ def download_film(select_title: MediaItem) -> str:
         return None
 
     # Define the filename and path for the downloaded film
-    title_name = os_manager.get_sanitize_file(select_title.name, select_title.date) + extension_output
-    mp4_path = os.path.join(site_constants.MOVIE_FOLDER, title_name.replace(extension_output, ""))
+    mp4_name = f"{os_manager.get_sanitize_file(select_title.name, select_title.date)}.{extension_output}"
+    mp4_path = os.path.join(site_constants.MOVIE_FOLDER, mp4_name.replace(f".{extension_output}", ""))
 
     # Download the film using the mega downloader
     mega = MEGA_Downloader(choose_files=True)
@@ -68,6 +68,6 @@ def download_film(select_title: MediaItem) -> str:
 
     output_path = mega.download_url(
         url=mega_link,
-        dest_path=os.path.join(mp4_path, title_name)
+        dest_path=os.path.join(mp4_path, mp4_name)
     )
     return output_path

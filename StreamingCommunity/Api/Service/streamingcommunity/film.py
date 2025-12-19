@@ -49,13 +49,13 @@ def download_film(select_title: MediaItem) -> str:
         return None
 
     # Define the filename and path for the downloaded film
-    title_name = f"{os_manager.get_sanitize_file(select_title.name, select_title.date)}.{extension_output}"
-    mp4_path = os.path.join(site_constants.MOVIE_FOLDER, title_name.replace(extension_output, ""))
+    mp4_name = f"{os_manager.get_sanitize_file(select_title.name, select_title.date)}.{extension_output}"
+    mp4_path = os.path.join(site_constants.MOVIE_FOLDER, mp4_name.replace(f".{extension_output}", ""))
 
     # Download the film using the m3u8 playlist, and output filename
     hls_process = HLS_Downloader(
         m3u8_url=master_playlist,
-        output_path=os.path.join(mp4_path, title_name)
+        output_path=os.path.join(mp4_path, mp4_name)
     ).start()
 
     if hls_process['error'] is not None:
