@@ -22,7 +22,7 @@ console = Console()
 class DeviceDownloader:
     def __init__(self):
         self.base_dir = binary_paths.ensure_binary_directory()
-        self.github_png_url = "https://github.com/Arrowar/StreamingCommunity/raw/main/.github/.site/img/crunchyroll_etp_rt.png"
+        self.github_png_url = "https://github.com/Arrowar/StreamingCommunity/raw/main/.github/doc/img/crunchyroll_etp_rt.png"
 
     def extract_png_chunk(self, png_with_wvd: str, out_wvd_path: str) -> bool:
         """Extract WVD data"""
