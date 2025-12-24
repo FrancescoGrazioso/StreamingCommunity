@@ -270,12 +270,11 @@ You can change some behaviors by tweaking the configuration file. The configurat
     - 360p (640x360)
 
 
-#### Output fomat Options
-- `extension`: Choose video format:
-  * `"mp4"`: Output as MP4 file
-  * `"mkv"`: Output as MKV file
+#### Output format Options
+Final video will be saved with the selected extension. For each format, specific subtitles parameters need to be set in the `M3U8_CONVERSION` section.
 
-Final video will be saved with the selected extension. For each format, specific subtitles parameters need to be set in the M3U8_CONVERSION section.
+> Note: if you want **ASS subtitles**, use `extension: "mkv"` and set `param_subtitles` to `["-c:s","ass"]`
+> (or `["-c:s","copy"]` if the input subtitles are already ASS and you just want to mux them).
 
 MP4 example:
 ```json
@@ -290,7 +289,7 @@ MP4 example:
 }
 ```
 
-MKV example:
+MKV example (WebVTT):
 ```json
 {
     "M3U8_CONVERSION": {

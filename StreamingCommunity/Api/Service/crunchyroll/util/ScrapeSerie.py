@@ -198,8 +198,7 @@ class GetSerieInfo:
                 fallback_guid = versions[0].get("guid")
                 fallback_locale = versions[0].get("audio_locale")
                 if fallback_guid:
-                    print(f"[DEBUG] Preferred locale {preferred_locale} not found, using fallback: {fallback_locale} -> {fallback_guid}")
-                    logging.info(f"Preferred locale {preferred_locale} not found, using fallback: {fallback_locale}")
+                    print(f"Preferred locale {preferred_locale} not found, using fallback: {fallback_locale} -> {fallback_guid}")
                     return fallback_guid
                     
         except Exception as e:

@@ -2,7 +2,7 @@
     "DEFAULT": {
         "debug": false,
         "show_message": true,
-        "fetch_domain_online": false
+        "fetch_domain_online": true
     },
     "OUT_FOLDER": {
         "root_path": "Video",
@@ -33,7 +33,7 @@
         "use_gpu": false,
         "param_video": ["-c:v", "libx265", "-crf", "28", "-preset", "medium"],
         "param_audio": ["-c:a", "libopus", "-b:a", "128k"],
-        "param_subtitles": ["-c:s", "webvtt"],
+        "param_subtitles": ["-c:s", "copy"],
         "param_final": ["-c", "copy"],
         "force_resolution": "Best",
         "extension": "mkv"
