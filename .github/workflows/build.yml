@@ -126,6 +126,8 @@ jobs:
             --hidden-import=Cryptodome.Util --hidden-import=Cryptodome.Util.Padding \
             --hidden-import=Cryptodome.Random \
             --hidden-import=curl_cffi --hidden-import=_cffi_backend \
+            --hidden-import=lxml --hidden-import=lxml.etree \
+            --hidden-import=isodate \
             --collect-all curl_cffi \
             --additional-hooks-dir=pyinstaller/hooks \
             --add-data "StreamingCommunity${{ matrix.separator }}StreamingCommunity" \
