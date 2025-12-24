@@ -1,6 +1,5 @@
 # 25.07.25
 
-import sys
 import base64
 from urllib.parse import urlencode
 
@@ -15,6 +14,7 @@ from pywidevine.pssh import PSSH
 
 # Variable
 console = Console()
+
 
 
 def get_widevine_keys(pssh: str, license_url: str, cdm_device_path: str, headers: dict = None, query_params: dict =None, key: str=None):
@@ -61,10 +61,6 @@ def get_widevine_keys(pssh: str, license_url: str, cdm_device_path: str, headers
             if 'Content-Type' not in req_headers:
                 req_headers['Content-Type'] = 'application/octet-stream'
 
-            # Send license request
-            if request_url is None:
-                console.print("[red]License URL is None.")
-                sys.exit(0)
             response = requests.post(request_url, headers=req_headers, impersonate="chrome124", **request_kwargs)
 
             if response.status_code != 200:
@@ -111,28 +107,59 @@ def get_widevine_keys(pssh: str, license_url: str, cdm_device_path: str, headers
                         'key': key_val.replace('-', '').strip()
                     })
 
-            if not content_keys:
-                console.print("[yellow]⚠️ No CONTENT keys found in license.")
-                return None
-
-            console.log(f"[cyan]KID: [green]{content_keys[0]['kid']} [white]| [cyan]KEY: [green]{content_keys[0]['key']}")
+            # Return keys
+            console.log(f"[cyan]Extracted {len(content_keys)} CONTENT keys from license.")
             return content_keys
-        
+
         else:
             content_keys = []
             raw_kid = key.split(":")[0]
             raw_key = key.split(":")[1]
+
             content_keys.append({
                 'kid': raw_kid.replace('-', '').strip(),
                 'key': raw_key.replace('-', '').strip()
             })
 
-            # Return keys
             console.log(f"[cyan]KID: [green]{content_keys[0]['kid']} [white]| [cyan]KEY: [green]{content_keys[0]['key']}")
             return content_keys
     
     finally:
         cdm.close(session_id)
+
+
+def map_keys_to_representations(keys: list, representations: list) -> dict:
+    """
+    Map decryption keys to representations based on their default_KID.
+    
+    Args:
+        keys (list): List of key dictionaries with 'kid' and 'key' fields
+        representations (list): List of representation dictionaries with 'default_kid' field
+    
+    Returns:
+        dict: Mapping of representation type to key info
+    """
+    key_mapping = {}
+    
+    for rep in representations:
+        rep_type = rep.get('type', 'unknown')
+        default_kid = rep.get('default_kid')
+        
+        if default_kid is None:
+            console.log(f"[yellow]Representation [yellow]{rep.get('id')} [yellow]has no default_kid, maybe problem with parser.")
+            continue
+            
+        for key_info in keys:
+            if key_info['kid'].lower() == default_kid.lower():
+                key_mapping[rep_type] = {
+                    'kid': key_info['kid'],
+                    'key': key_info['key'],
+                    'representation_id': rep.get('id'),
+                    'default_kid': default_kid
+                }
+                break
+    
+    return key_mapping
 
 
 def get_info_wvd(cdm_device_path):

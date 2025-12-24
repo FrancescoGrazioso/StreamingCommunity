@@ -15,6 +15,7 @@
 
 *⚡ **Quick Start:** `pip install StreamingCommunity && StreamingCommunity`*
 
+📺 **[Services](.github/doc/site.md)** - See all supported streaming platforms
 </div>
 
 ---
@@ -24,8 +25,7 @@
 - 🚀 [Quick Start](#quick-start)
 - 📥 [Downloaders](#downloaders)
 - 🛠️ [Configuration](#configuration)
-- 🔐 [Login](.github/.site/login.md)
-- 🌐 [Domain](https://arrowar.github.io/StreamingCommunity)
+- 🔐 [Login](.github/doc/login.md)
 - 💡 [Usage Examples](#usage-examples)
 - 🔍 [Global Search](#global-search)
 - 🧩 [Advanced Features](#advanced-options)

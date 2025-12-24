@@ -20,12 +20,10 @@ DEFAULT_SLOWDOWN_AFTER = 50     # Number of requests before introducing slowdown
 
 
 class PlaybackError(Exception):
-    """Custom exception for playback-related errors that shouldn't crash the program"""
     pass
 
 
 class RateLimiter:
-    """Simple token-bucket rate limiter to avoid server-side throttling."""
     def __init__(self, qps: float):
         self.qps = max(0.1, float(qps))
         self._last = 0.0
@@ -51,7 +49,7 @@ class CrunchyrollClient:
         self.access_token: Optional[str] = None
         self.refresh_token: Optional[str] = None
         self.account_id: Optional[str] = None
-        self.expires_at: float = 0.0                # epoch timestamp
+        self.expires_at: float = 0.0
         
         # Rate limiting configuration
         self.rate_limiter = RateLimiter(qps=DEFAULT_QPS)
@@ -218,8 +216,7 @@ class CrunchyrollClient:
         Get available streams for media_id.
         """
         response = self._request_with_retry(
-            'GET',
-            f'{BASE_URL}/playback/v3/{media_id}/web/chrome/play',
+            'GET', f'{BASE_URL}/playback/v3/{media_id}/web/chrome/play',
             params={'locale': self.locale}
         )
 
@@ -231,7 +228,6 @@ class CrunchyrollClient:
             raise PlaybackError("TOO_MANY_ACTIVE_STREAMS. Wait a few minutes and try again.")
         
         response.raise_for_status()
-        
         data = response.json()
         
         if data.get('error') == 'Playback is Rejected':
@@ -281,40 +277,30 @@ def _find_token_anywhere(obj) -> Optional[str]:
 def get_playback_session(client: CrunchyrollClient, url_id: str) -> Optional[Tuple[str, Dict, List[Dict], Optional[str], Optional[str]]]:
     """
     Return the playback session details.
-    
+
     Returns:
         Tuple with (mpd_url, headers, subtitles, token, audio_locale) or None if access denied
     """
     data = client.get_streams(url_id)
-    
-    # If get_streams returns None, it means access was denied (403)
-    if data is None:
+    try:
+        url = data.get('url')
+        audio_locale_current = data.get('audio_locale') or data.get('audio', {}).get('locale')
+
+        # Collect subtitles with metadata
+        subtitles = []
+        subtitles_data = data.get('subtitles', {})
+        for lang_code, sub_info in subtitles_data.items():
+            if sub_info.get('url'):
+                subtitles.append({
+                    'language': sub_info.get('language'),
+                    'format': sub_info.get('format'),
+                    'url': sub_info.get('url'),
+                })
+
+        token = _find_token_anywhere(data)
+        headers = client._get_headers()
+        return url, headers, subtitles, token, audio_locale_current
+
+    except Exception as e:
+        logging.error(f"Failed to parse playback session: {e}, Premium subscription may be required.")
         return None
-    
-    url = data.get('url')
-    audio_locale_current = data.get('audio_locale') or data.get('audio', {}).get('locale')
-    
-    # Collect subtitles with metadata
-    subtitles = []
-    subs_obj = data.get('subtitles') or {}
-    if isinstance(subs_obj, dict):
-        for lang, info in subs_obj.items():
-            if not info:
-                continue
-            sub_url = info.get('url')
-            if not sub_url:
-                continue
-            
-            subtitles.append({
-                'language': lang,
-                'url': sub_url,
-                'format': info.get('format'),
-                'type': info.get('type'),                           # "subtitles" | "captions"
-                'closed_caption': bool(info.get('closed_caption')),
-                'label': info.get('display') or info.get('title') or info.get('language')
-            })
-    
-    token = _find_token_anywhere(data)
-    headers = client._get_headers()
-    
-    return url, headers, subtitles, token, audio_locale_current

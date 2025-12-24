@@ -1,5 +1,4 @@
-# 16.12.25
-
+# 26.11.2025
 
 # External library
 from rich.console import Console
@@ -13,17 +12,16 @@ from StreamingCommunity.Api.Template import site_constants, MediaItem, get_selec
 # Logic
 from .site import title_search, table_show_manager, media_search_manager
 from .series import download_series
-from .film import download_film
 
 
 # Variable
-indice = 11
+indice = 14
 _useFor = "Serie"
-_region = "US"
+_region = "IT"
 _deprecate = False
 _stream_type = "HLS"
 _maxResolution = "1080p"
-_drm = True
+_drm = False
 
 
 msg = Prompt()
@@ -54,11 +52,6 @@ def process_search_result(select_title, selections=None):
 
         download_series(select_title, season_selection, episode_selection)
         media_search_manager.clear()
-        table_show_manager.clear()
-        return True
-    
-    else:
-        download_film(select_title)
         table_show_manager.clear()
         return True
 

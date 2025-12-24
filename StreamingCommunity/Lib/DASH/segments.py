@@ -4,6 +4,8 @@ import os
 import asyncio
 import time
 from typing import Dict, Optional
+from urllib.parse import urlparse
+from pathlib import Path
 
 
 # External libraries
@@ -16,6 +18,10 @@ from rich.console import Console
 from StreamingCommunity.Util.http_client import get_userAgent
 from StreamingCommunity.Lib.HLS.estimator import M3U8_Ts_Estimator
 from StreamingCommunity.Util import config_manager, Colors
+
+
+# DASH single-file MP4 support
+from ..MP4 import MP4_Downloader
 
 
 # Config
@@ -33,7 +39,7 @@ console = Console()
 
 
 class MPD_Segments:
-    def __init__(self, tmp_folder: str, representation: dict, pssh: str = None, limit_segments: int = None):
+    def __init__(self, tmp_folder: str, representation: dict, pssh: str = None, limit_segments: int = None, custom_headers: Optional[Dict[str, str]] = None):
         """
         Initialize MPD_Segments with temp folder, representation, optional pssh, and segment limit.
         
@@ -46,7 +52,8 @@ class MPD_Segments:
         self.tmp_folder = tmp_folder
         self.selected_representation = representation
         self.pssh = pssh
-        
+        self.custom_headers = custom_headers or {}
+
         # Use LIMIT_SEGMENT from config if limit_segments is not specified or is 0
         if limit_segments is None or limit_segments == 0:
             self.limit_segments = LIMIT_SEGMENT if LIMIT_SEGMENT > 0 else None
@@ -73,17 +80,42 @@ class MPD_Segments:
         # Estimator for progress tracking
         self.estimator: Optional[M3U8_Ts_Estimator] = None
 
+    @staticmethod
+    def _infer_url_ext(url: Optional[str]) -> Optional[str]:
+        """Return lowercased extension without dot from URL path (ignores query/fragment)."""
+        path = urlparse(url).path or ""
+        ext = Path(path).suffix
+        return ext.lstrip(".").lower() if ext else None
+
+    def _get_segment_url_type(self) -> Optional[str]:
+        """Prefer representation field, otherwise infer from first segment URL."""
+        rep = self.selected_representation or {}
+        t = (rep.get("segment_url_type") or "").strip().lower()
+        if t:
+            return t
+        urls = rep.get("segment_urls") or []
+        return self._infer_url_ext(urls[0]) if urls else None
+
+    def _merged_headers(self) -> Dict[str, str]:
+        """Ensure UA exists while keeping caller-provided headers."""
+        h = dict(self.custom_headers or {})
+        h.setdefault("User-Agent", get_userAgent())
+        return h
+
     def get_concat_path(self, output_dir: str = None):
         """
         Get the path for the concatenated output file.
         """
         rep_id = self.selected_representation['id']
-        return os.path.join(output_dir or self.tmp_folder, f"{rep_id}_encrypted.m4s")
+        ext = "mp4" if (self._get_segment_url_type() == "mp4") else "m4s"
+        return os.path.join(output_dir or self.tmp_folder, f"{rep_id}_encrypted.{ext}")
         
     def get_segments_count(self) -> int:
         """
         Returns the total number of segments available in the representation.
         """
+        if self._get_segment_url_type() == "mp4":
+            return 1
         return len(self.selected_representation.get('segment_urls', []))
 
     def download_streams(self, output_dir: str = None, description: str = "DASH"):
@@ -95,27 +127,72 @@ class MPD_Segments:
             - description (str): Description for progress bar (e.g., "Video", "Audio Italian")
         """
         concat_path = self.get_concat_path(output_dir)
+        seg_type = (self._get_segment_url_type() or "").lower()
+
+        # Single-file MP4: download directly (no init/segment concat)
+        if seg_type == "mp4":
+            rep = self.selected_representation
+            url = (rep.get("segment_urls") or [None])[0] or rep.get("init_url")
+            if not url:
+                return {
+                    "type": description,
+                    "nFailed": 1,
+                    "stopped": False,
+                    "concat_path": concat_path,
+                    "representation_id": rep.get("id"),
+                    "pssh": self.pssh,
+                }
+
+            os.makedirs(output_dir or self.tmp_folder, exist_ok=True)
+            try:
+                downloaded_file, kill = MP4_Downloader(
+                    url=url,
+                    path=concat_path,
+                    headers_=self._merged_headers(),
+                    show_final_info=False
+                )
+                self.download_interrupted = bool(kill)
+                return {
+                    "type": description,
+                    "nFailed": 0,
+                    "stopped": bool(kill),
+                    "concat_path": downloaded_file or concat_path,
+                    "representation_id": rep.get("id"),
+                    "pssh": self.pssh,
+                }
+            
+            except KeyboardInterrupt:
+                self.download_interrupted = True
+                console.print("\n[red]Download interrupted by user (Ctrl+C).")
+                return {
+                    "type": description,
+                    "nFailed": 1,
+                    "stopped": True,
+                    "concat_path": concat_path,
+                    "representation_id": rep.get("id"),
+                    "pssh": self.pssh,
+                }
 
         # Apply segment limit if specified
         if self.limit_segments is not None:
             orig_count = len(self.selected_representation.get('segment_urls', []))
             if orig_count > self.limit_segments:
-
-                # Limit segment URLs
                 self.selected_representation['segment_urls'] = self.selected_representation['segment_urls'][:self.limit_segments]
 
         # Run async download in sync mode
         try:
-            asyncio.run(self.download_segments(output_dir=output_dir, description=description))
+            res = asyncio.run(self.download_segments(output_dir=output_dir, description=description))
 
         except KeyboardInterrupt:
             self.download_interrupted = True
             console.print("\n[red]Download interrupted by user (Ctrl+C).")
+            res = {"type": description, "nFailed": 0, "stopped": True}
 
         return {
+            **(res or {}),
             "concat_path": concat_path,
-            "representation_id": self.selected_representation['id'],
-            "pssh": self.pssh
+            "representation_id": self.selected_representation.get("id"),
+            "pssh": self.pssh,
         }
 
     async def download_segments(self, output_dir: str = None, concurrent_downloads: int = None, description: str = "DASH"):
@@ -133,8 +210,9 @@ class MPD_Segments:
         init_url = rep.get('init_url')
 
         os.makedirs(output_dir or self.tmp_folder, exist_ok=True)
-        concat_path = os.path.join(output_dir or self.tmp_folder, f"{rep_id}_encrypted.m4s")
-        
+        concat_path = self.get_concat_path(output_dir)
+
+        # Temp directory for individual .m4s segment files (needed for concat flow)
         temp_dir = os.path.join(output_dir or self.tmp_folder, f"{rep_id}_segments")
         os.makedirs(temp_dir, exist_ok=True)
 
@@ -204,9 +282,9 @@ class MPD_Segments:
             with open(concat_path, 'wb') as outfile:
                 pass
             return
-        
+
         try:
-            headers = {'User-Agent': get_userAgent()}
+            headers = self._merged_headers()
             response = await client.get(init_url, headers=headers, follow_redirects=True)
 
             with open(concat_path, 'wb') as outfile:
@@ -239,7 +317,7 @@ class MPD_Segments:
         """
         async def download_single(url, idx):
             async with semaphore:
-                headers = {'User-Agent': get_userAgent()}
+                headers = self._merged_headers()
                 temp_file = os.path.join(temp_dir, f"seg_{idx:06d}.tmp")
                 
                 for attempt in range(max_retry):
@@ -317,7 +395,7 @@ class MPD_Segments:
             
             async def download_single(url, idx):
                 async with semaphore:
-                    headers = {'User-Agent': get_userAgent()}
+                    headers = self._merged_headers()
                     temp_file = os.path.join(temp_dir, f"seg_{idx:06d}.tmp")
 
                     for attempt in range(max_retry):

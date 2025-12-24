@@ -2,7 +2,7 @@
     "DEFAULT": {
         "debug": false,
         "show_message": true,
-        "fetch_domain_online": true
+        "fetch_domain_online": false
     },
     "OUT_FOLDER": {
         "root_path": "Video",
@@ -23,7 +23,7 @@
         "merge_subs": true,
         "specific_list_subtitles": [
             "ita",
-            "eng"
+            "it-IT"
         ],
         "limit_segment": 0,
         "cleanup_tmp_folder": true,

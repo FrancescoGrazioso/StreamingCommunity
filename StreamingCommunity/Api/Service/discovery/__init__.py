@@ -1,5 +1,4 @@
-# 16.12.25
-
+# 22.12.25
 
 # External library
 from rich.console import Console
@@ -13,16 +12,15 @@ from StreamingCommunity.Api.Template import site_constants, MediaItem, get_selec
 # Logic
 from .site import title_search, table_show_manager, media_search_manager
 from .series import download_series
-from .film import download_film
 
 
-# Variable
-indice = 11
-_useFor = "Serie"
+# Variables
+indice = 13
+_useFor = "Film_&_Serie"
 _region = "US"
 _deprecate = False
-_stream_type = "HLS"
-_maxResolution = "1080p"
+_stream_type = "DASH"
+_maxResolution = "720p"
 _drm = True
 
 
@@ -32,18 +30,20 @@ console = Console()
 
 def process_search_result(select_title, selections=None):
     """
-    Handles the search result and initiates the download for either a film or series.
+    Handles the search result and initiates download for film or series
     
     Parameters:
-        select_title (MediaItem): The selected media item. Can be None if selection fails.
-        selections (dict, optional): Dictionary containing selection inputs that bypass manual input
-                                    e.g., {'season': season_selection, 'episode': episode_selection}
+        select_title (MediaItem): The selected media item
+        selections (dict, optional): Dictionary containing selection inputs
+                                    {'season': season_selection, 'episode': episode_selection}
+    
     Returns:
         bool: True if processing was successful, False otherwise
     """
     if not select_title:
+        console.print("[yellow]No title selected or selection cancelled.")
         return False
-
+    
     if select_title.type == 'tv':
         season_selection = None
         episode_selection = None
@@ -51,49 +51,44 @@ def process_search_result(select_title, selections=None):
         if selections:
             season_selection = selections.get('season')
             episode_selection = selections.get('episode')
-
+        
         download_series(select_title, season_selection, episode_selection)
         media_search_manager.clear()
-        table_show_manager.clear()
-        return True
-    
-    else:
-        download_film(select_title)
         table_show_manager.clear()
         return True
 
 
 def search(string_to_search: str = None, get_onlyDatabase: bool = False, direct_item: dict = None, selections: dict = None):
     """
-    Main function of the application for search.
-
+    Main function for searching and downloading content
+    
     Parameters:
-        string_to_search (str, optional): String to search for. Can be passed from run.py.
-        get_onlyDatabase (bool, optional): If True, return only the database search manager object.
-        direct_item (dict, optional): Direct item to process (bypasses search).
-        selections (dict, optional): Dictionary containing selection inputs that bypass manual input
-                                     for series (season/episode).
+        string_to_search (str, optional): Search query string
+        get_onlyDatabase (bool, optional): If True, return only the database object
+        direct_item (dict, optional): Direct item to process (bypass search)
+        selections (dict, optional): Dictionary containing selection inputs
+                                    {'season': season_selection, 'episode': episode_selection}
     """
     if direct_item:
         select_title = MediaItem(**direct_item)
         result = process_search_result(select_title, selections)
         return result
     
-    # Get the user input for the search term
+    # Get search query from user
     actual_search_query = None
     if string_to_search is not None:
         actual_search_query = string_to_search.strip()
     else:
         actual_search_query = msg.ask(f"\n[purple]Insert a word to search in [green]{site_constants.SITE_NAME}").strip()
-
+    
     # Handle empty input
     if not actual_search_query:
         return False
-
+    
     # Search on database
     len_database = title_search(actual_search_query)
-
-    # If only the database is needed, return the manager
+    
+    # If only database is needed, return the manager
     if get_onlyDatabase:
         return media_search_manager
     
