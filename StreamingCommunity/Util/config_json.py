@@ -170,7 +170,7 @@ class ConfigManager:
     
     def _load_site_data_online(self) -> None:
         """Load site data from GitHub and update local domains.json file."""
-        domains_github_url = "https://raw.githubusercontent.com/Arrowar/StreamingCommunity/refs/heads/main/.github/workflows/script/domains.json"
+        domains_github_url = "https://raw.githubusercontent.com/Arrowar/StreamingCommunity/refs/heads/main/.github/script/domains.json"
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
         }
@@ -198,7 +198,7 @@ class ConfigManager:
     
     def _save_domains_to_appropriate_location(self) -> None:
         """Save domains to the appropriate location based on existing files."""
-        github_domains_path = os.path.join(self.base_path, '.github', 'workflows', 'script', 'domains.json')
+        github_domains_path = os.path.join(self.base_path, '.github', 'script', 'domains.json')
         console.print(f"[cyan]Domain path: [green]{github_domains_path}")
         
         try:
@@ -230,7 +230,7 @@ class ConfigManager:
     def _load_site_data_from_file(self) -> None:
         """Load site data from local domains.json file."""
         try:
-            github_domains_path = os.path.join(self.base_path, '.github', 'workflows', 'script', 'domains.json')
+            github_domains_path = os.path.join(self.base_path, '.github', 'script', 'domains.json')
             
             if os.path.exists(github_domains_path):
                 console.print(f"[cyan]Domain path: [green]{github_domains_path}")
@@ -259,7 +259,7 @@ class ConfigManager:
     
     def _handle_site_data_fallback(self) -> None:
         """Handle site data fallback in case of error."""
-        github_domains_path = os.path.join(self.base_path, '.github', 'workflows', 'script', 'domains.json')
+        github_domains_path = os.path.join(self.base_path, '.github', 'script', 'domains.json')
         
         if os.path.exists(github_domains_path):
             console.print("[yellow]Attempting fallback to GitHub structure domains.json file...")
