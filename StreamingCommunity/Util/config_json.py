@@ -14,31 +14,31 @@ from rich.console import Console
 
 # Variable
 console = Console()
+CONFIG_FILENAME = 'config.json'
+DOMAINS_FILENAME = 'domains.json'
+GITHUB_DOMAINS_PATH = '.github/script/domains.json'
+CONFIG_DOWNLOAD_URL = 'https://raw.githubusercontent.com/Arrowar/StreamingCommunity/refs/heads/main/config.json'
+DOMAINS_DOWNLOAD_URL = 'https://raw.githubusercontent.com/Arrowar/SC_Domains/refs/heads/main/domains.json'
 
 
 class ConfigManager:
-    def __init__(self, file_name: str = 'config.json') -> None:
-        """
-        Initialize the ConfigManager with caching.
-        
-        Args:
-            file_name (str, optional): Configuration file name. Default: 'config.json'.
-        """
+    def __init__(self) -> None:
+        """Initialize the ConfigManager with caching."""
+        file_name = CONFIG_FILENAME
+            
         self.base_path = None
         if getattr(sys, 'frozen', False):
             self.base_path = os.path.dirname(sys.executable) # PyInstaller
         else:
             self.base_path = os.getcwd()
             
-        # Initialize file paths
+        # Initialize file paths using static variables
         self.file_path = os.path.join(self.base_path, file_name)
-        self.domains_path = os.path.join(self.base_path, 'domains.json')
+        self.domains_path = os.path.join(self.base_path, DOMAINS_FILENAME)
+        self.github_domains_path = os.path.join(self.base_path, GITHUB_DOMAINS_PATH)
         
         # Display the actual file path for debugging
         console.print(f"[cyan]Config path: [green]{self.file_path}")
-        
-        # Reference repository URL
-        self.reference_config_url = 'https://raw.githubusercontent.com/Arrowar/StreamingCommunity/refs/heads/main/config.json'
         
         # Initialize data structures
         self.config = {}
@@ -142,10 +142,8 @@ class ConfigManager:
         
     def _download_reference_config(self) -> None:
         """Download the reference configuration from GitHub."""
-        console.print(f"[cyan]Downloading configuration: [green]{self.reference_config_url}")
-
         try:
-            response = requests.get(self.reference_config_url, timeout=8, headers={'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+            response = requests.get(CONFIG_DOWNLOAD_URL, timeout=8, headers={'User-Agent': "Mozilla/5.0"})
             
             if response.status_code == 200:
                 with open(self.file_path, 'wb') as f:
@@ -158,7 +156,7 @@ class ConfigManager:
                 raise Exception(error_msg)
             
         except Exception as e:
-            console.print(f"[red]Download error: {str(e)}")
+            console.print(f"[red]Download error: {str(e)} for url: {CONFIG_DOWNLOAD_URL}")
             raise
     
     def _load_site_data(self) -> None:
@@ -170,13 +168,11 @@ class ConfigManager:
     
     def _load_site_data_online(self) -> None:
         """Load site data from GitHub and update local domains.json file."""
-        domains_github_url = "https://raw.githubusercontent.com/Arrowar/StreamingCommunity/refs/heads/main/.github/script/domains.json"
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+            "User-Agent": "Mozilla/5.0"
         }
-        
         try:
-            response = requests.get(domains_github_url, timeout=8, headers=headers)
+            response = requests.get(DOMAINS_DOWNLOAD_URL, timeout=8, headers=headers)
 
             if response.ok:
                 self.configSite = response.json()
@@ -198,43 +194,38 @@ class ConfigManager:
     
     def _save_domains_to_appropriate_location(self) -> None:
         """Save domains to the appropriate location based on existing files."""
-        github_domains_path = os.path.join(self.base_path, '.github', 'script', 'domains.json')
-        console.print(f"[cyan]Domain path: [green]{github_domains_path}")
-        
+        script_dir = os.path.join(self.base_path, ".github", "script")
+        if os.path.isdir(script_dir):
+            target_path = os.path.join(script_dir, DOMAINS_FILENAME)
+            console.print(f"[cyan]Domain path: [green]{target_path}")
+        else:
+            target_path = self.domains_path
+            console.print(f"[cyan]Domain path: [green]{target_path}")
+
         try:
-            if os.path.exists(github_domains_path):
-                with open(github_domains_path, 'w', encoding='utf-8') as f:
+            if not os.path.exists(target_path):
+                with open(target_path, 'w', encoding='utf-8') as f:
                     json.dump(self.configSite, f, indent=4, ensure_ascii=False)
-                
-            elif not os.path.exists(self.domains_path):
-                with open(self.domains_path, 'w', encoding='utf-8') as f:
-                    json.dump(self.configSite, f, indent=4, ensure_ascii=False)
-                console.print(f"[green]Domains saved to: {self.domains_path}")
-                
             else:
-                console.print(f"[yellow]Local domains.json already exists, not overwriting: {self.domains_path}")
+                console.print(f"[yellow]Local domains.json already exists, not overwriting: {target_path}")
                 console.print("[yellow]Tip: Delete the file if you want to recreate it from GitHub")
                 
         except Exception as save_error:
             console.print(f"[yellow]Warning: Could not save domains to file: {str(save_error)}")
-
-            # Try to save to root as fallback only if it doesn't exist
-            if not os.path.exists(self.domains_path):
+            if target_path != self.domains_path and not os.path.exists(self.domains_path):
                 try:
                     with open(self.domains_path, 'w', encoding='utf-8') as f:
                         json.dump(self.configSite, f, indent=4, ensure_ascii=False)
                     console.print(f"[green]Domains saved to fallback location: {self.domains_path}")
                 except Exception as fallback_error:
                     console.print(f"[red]Failed to save to fallback location: {str(fallback_error)}")
-    
+
     def _load_site_data_from_file(self) -> None:
         """Load site data from local domains.json file."""
         try:
-            github_domains_path = os.path.join(self.base_path, '.github', 'script', 'domains.json')
-            
-            if os.path.exists(github_domains_path):
-                console.print(f"[cyan]Domain path: [green]{github_domains_path}")
-                with open(github_domains_path, 'r', encoding='utf-8') as f:
+            if os.path.exists(self.github_domains_path):
+                console.print(f"[cyan]Domain path: [green]{self.github_domains_path}")
+                with open(self.github_domains_path, 'r', encoding='utf-8') as f:
                     self.configSite = json.load(f)
                 
                 site_count = len(self.configSite) if isinstance(self.configSite, dict) else 0
@@ -248,9 +239,7 @@ class ConfigManager:
                 console.print(f"[green]Domains loaded from root file: {site_count} streaming services")
 
             else:
-                error_msg = f"domains.json not found in GitHub structure ({github_domains_path}) or root ({self.domains_path}) and fetch_domain_online is disabled"
-                console.print(f"[red]Configuration error: {error_msg}")
-                console.print("[yellow]Tip: Set 'fetch_domain_online' to true to download domains from GitHub")
+                console.print(f"[cyan]Domain path: [red]Disabled")
                 self.configSite = {}
         
         except Exception as e:
@@ -259,12 +248,10 @@ class ConfigManager:
     
     def _handle_site_data_fallback(self) -> None:
         """Handle site data fallback in case of error."""
-        github_domains_path = os.path.join(self.base_path, '.github', 'script', 'domains.json')
-        
-        if os.path.exists(github_domains_path):
+        if os.path.exists(self.github_domains_path):
             console.print("[yellow]Attempting fallback to GitHub structure domains.json file...")
             try:
-                with open(github_domains_path, 'r', encoding='utf-8') as f:
+                with open(self.github_domains_path, 'r', encoding='utf-8') as f:
                     self.configSite = json.load(f)
                 console.print("[green]Fallback to GitHub structure successful")
                 return
