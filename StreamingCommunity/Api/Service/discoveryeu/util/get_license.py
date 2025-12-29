@@ -133,9 +133,9 @@ def get_playback_info(video_id):
             'deviceId': '',
             'drmTypes': {
                 'widevine': True,
-                'playready': False,
+                'playready': True,
                 'fairplay': False,
-                'clearkey': True,
+                'clearkey': False,
             },
             'drmSupported': True
         },
