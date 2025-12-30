@@ -513,11 +513,11 @@ class MPD_Segments:
         For m4s segments, use init + segments approach.
         """
         seg_type = self._get_segment_url_type()
-        console.print(f"\n[cyan]Detected stream type: [green]{seg_type}")
+        console.print(f"\n[cyan]Detected stream type: [red]{seg_type}")
         is_mp4_segments = seg_type == "mp4" and self._has_varying_segment_urls(self.selected_representation.get('segment_urls', []))
         
         if is_mp4_segments:
-            console.print("[cyan]Concatenating MP4 segments with moof/mdat extraction...")
+            console.print("[yellow]Concatenating MP4 segments with moof/mdat extraction...")
             
             # Write VIDEO0.mp4 fully, then only moof/mdat from VIDEO1+.mp4
             with open(concat_path, 'wb') as outfile:
@@ -539,7 +539,7 @@ class MPD_Segments:
                                 outfile.write(atom)
         
         else:
-            console.print("[cyan]Concatenating m4s segments...")
+            console.print("[yellow]Concatenating m4s segments...")
             with open(concat_path, 'ab') as outfile:
                 for idx in range(total_segments):
                     temp_file = os.path.join(temp_dir, f"seg_{idx:06d}.tmp")

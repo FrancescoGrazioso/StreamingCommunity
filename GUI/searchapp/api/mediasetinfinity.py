@@ -53,7 +53,7 @@ class MediasetInfinityAPI(BaseStreamingAPI):
                     
                     media_item = MediaItem(
                         id=item_dict.get('id'),
-                        title=item_dict.get('name'),
+                        name=item_dict.get('name'),
                         type=item_dict.get('type'),
                         url=item_dict.get('url'),
                         poster=item_dict.get('image'),

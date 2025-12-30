@@ -55,7 +55,7 @@ class AnimeUnityAPI(BaseStreamingAPI):
                     
                     media_item = MediaItem(
                         id=item_dict.get('id'),
-                        title=item_dict.get('name'),
+                        name=item_dict.get('name'),
                         slug=item_dict.get('slug', ''),
                         type=item_dict.get('type'),
                         url=item_dict.get('url'),

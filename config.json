@@ -15,7 +15,7 @@
     "M3U8_DOWNLOAD": {
         "default_video_workers": 8,
         "default_audio_workers": 8,
-        "segment_timeout": 6,
+        "segment_timeout": 8,
         "enable_retry": true,
         "specific_list_audio": [
             "ita",
@@ -40,7 +40,7 @@
     },
     "REQUESTS": {
         "verify": false,
-        "timeout": 12,
+        "timeout": 20,
         "max_retry": 8
     },
     "HOOKS": {

@@ -14,7 +14,7 @@ from pathvalidate import sanitize_filename, sanitize_filepath
 
 
 # Internal utilities
-from .installer import check_ffmpeg, check_mp4decrypt, check_device_wvd_path, check_device_prd_path, check_megatools
+from .installer import check_ffmpeg, check_bento4_tools, check_device_wvd_path, check_device_prd_path, check_megatools
 from StreamingCommunity.Lib.DASH.extractor.ex_widevine import get_info_wvd
 from StreamingCommunity.Lib.DASH.extractor.ex_playready import get_info_prd
 
@@ -211,7 +211,7 @@ class InternetManager():
 class OsSummary:
     def __init__(self):
         self.ffmpeg_path, self.ffprobe_path = check_ffmpeg()
-        self.mp4decrypt_path = check_mp4decrypt()
+        self.bento4_decrypt_path, self.bento4_dump_path = check_bento4_tools()
         self.wvd_path = check_device_wvd_path()
         self.prd_path = check_device_prd_path()
         self.megatools_path = check_megatools()
@@ -221,8 +221,7 @@ class OsSummary:
         """Display the paths of all detected binaries."""
         paths = {
             'ffmpeg': self.ffmpeg_path,
-            'ffprobe': self.ffprobe_path,
-            'mp4decrypt': self.mp4decrypt_path,
+            'mp4decrypt': self.bento4_decrypt_path,
             'wvd': self.wvd_path,
             'megatools': self.megatools_path
         }
@@ -253,9 +252,13 @@ def get_ffprobe_path():
     """Returns the path of FFprobe."""
     return os_summary.ffprobe_path
 
-def get_mp4decrypt_path():
+def get_bento4_decrypt_path():
     """Returns the path of mp4decrypt."""
-    return os_summary.mp4decrypt_path
+    return os_summary.bento4_decrypt_path
+
+def get_bento4_dump_path():
+    """Returns the path of mp4dump."""
+    return os_summary.bento4_dump_path
 
 def get_wvd_path():
     """Returns the path of wvd."""

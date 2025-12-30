@@ -53,7 +53,7 @@ class RaiPlayAPI(BaseStreamingAPI):
                     
                     media_item = MediaItem(
                         path_id=item_dict.get('path_id'),
-                        title=item_dict.get('name'),
+                        name=item_dict.get('name'),
                         type=item_dict.get('type'),
                         url=item_dict.get('url'),
                         poster=item_dict.get('image'),

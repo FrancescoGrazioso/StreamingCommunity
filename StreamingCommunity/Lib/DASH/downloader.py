@@ -273,9 +273,6 @@ class DASH_Downloader:
         # Download subtitles
         self.download_subtitles()
 
-        # Get encryption method from parser
-        encryption_method = self.parser.encryption_method
-
         # Download and decrypt video
         video_rep = self.get_representation_by_type("video")
         if video_rep:
@@ -322,10 +319,7 @@ class DASH_Downloader:
                         return False
 
                     console.log(f"[cyan]Using video key: [red]{video_key_info['kid']}[white]: [red]{video_key_info['key']} [cyan]for representation [yellow]{video_key_info.get('representation_id', 'N/A')}")
-                    
-                    # Use encryption method from video representation or parser
-                    video_encryption = video_rep.get('encryption_method') or encryption_method
-                    result_path = decrypt_with_mp4decrypt("Video", encrypted_path, video_key_info['kid'], video_key_info['key'],  output_path=decrypted_path, encryption_method=video_encryption)
+                    result_path = decrypt_with_mp4decrypt("Video", encrypted_path, video_key_info['kid'], video_key_info['key'],  output_path=decrypted_path)
 
                     if not result_path:
                         self.error = f"Video decryption failed with key {video_key_info['kid']}"
@@ -384,10 +378,7 @@ class DASH_Downloader:
 
                 # Decrypt audio using the mapped key and encryption method
                 decrypted_path = os.path.join(self.decrypted_dir, f"audio.{EXTENSION_OUTPUT}")
-                
-                # Use encryption method from audio representation or parser
-                audio_encryption = audio_rep.get('encryption_method') or encryption_method
-                result_path = decrypt_with_mp4decrypt(f"Audio {audio_language}", encrypted_path, audio_key_info['kid'], audio_key_info['key'], output_path=decrypted_path, encryption_method=audio_encryption)
+                result_path = decrypt_with_mp4decrypt(f"Audio {audio_language}", encrypted_path, audio_key_info['kid'], audio_key_info['key'], output_path=decrypted_path)
 
                 if not result_path:
                     self.error = f"Audio decryption failed with key {audio_key_info['kid']}"

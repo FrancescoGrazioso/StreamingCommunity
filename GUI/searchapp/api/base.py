@@ -9,7 +9,7 @@ from dataclasses import dataclass
 @dataclass
 class MediaItem:
     """Standardized media item representation."""
-    title: str
+    name: str
     type: str  # 'film', 'series', 'ova', etc.
     slug: str = None
     id: Any = None
@@ -27,7 +27,7 @@ class MediaItem:
     def to_dict(self) -> Dict[str, Any]:
         return {
             'id': self.id,
-            'title': self.title,
+            'name': self.name,
             'slug': self.slug,
             'type': self.type,
             'url': self.url,
@@ -135,7 +135,7 @@ class BaseStreamingAPI(ABC):
             return self._dict_to_media_item(partial_item)
         
         # Try to find in database
-        query = (partial_item.get('title') or partial_item.get('name') or partial_item.get('slug') or partial_item.get('display_title'))
+        query = (partial_item.get('name') or partial_item.get('slug') or partial_item.get('display_title'))
         
         if query:
             results = self.search(query)
@@ -155,7 +155,7 @@ class BaseStreamingAPI(ABC):
         """Convert dictionary to MediaItem."""
         return MediaItem(
             id=data.get('id'),
-            title=data.get('title') or data.get('name') or 'Unknown',
+            name=data.get('name') or 'Unknown',
             slug=data.get('slug') or '',
             type=data.get('type') or data.get('media_type') or 'unknown',
             url=data.get('url'),

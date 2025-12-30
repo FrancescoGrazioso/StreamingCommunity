@@ -53,7 +53,7 @@ class TubiTVAPI(BaseStreamingAPI):
                     item_dict = element.__dict__.copy() if hasattr(element, '__dict__') else {}
                     
                     media_item = MediaItem(
-                        title=item_dict.get('name'),
+                        name=item_dict.get('name'),
                         type=item_dict.get('type'),
                         url=item_dict.get('url'),
                         poster=item_dict.get('image'),

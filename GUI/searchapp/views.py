@@ -23,7 +23,7 @@ from GUI.searchapp.api.base import MediaItem
 def _media_item_to_display_dict(item: MediaItem, source_alias: str) -> Dict[str, Any]:
     """Convert MediaItem to template-friendly dictionary."""
     result = {
-        'display_title': item.title,
+        'display_title': item.name,
         'display_type': item.type.capitalize(),
         'source': source_alias.capitalize(),
         'source_alias': source_alias,
@@ -203,7 +203,7 @@ def start_download(request: HttpRequest) -> HttpResponse:
         return redirect("search_home")
 
     # Extract title for message
-    title = item_payload.get("title")
+    title = item_payload.get("name")
 
     # For animeunity, default to all episodes if not specified and not a movie
     site = source_alias.split("_")[0].lower()
@@ -269,7 +269,7 @@ def series_detail(request: HttpRequest) -> HttpResponse:
             seasons_data = [season.to_dict() for season in seasons]
             
             context = {
-                "title": media_item.title,
+                "title": media_item.name,
                 "source_alias": source_alias,
                 "item_payload": json.dumps(media_item.to_dict()),
                 "seasons": seasons_data,
@@ -300,7 +300,7 @@ def series_detail(request: HttpRequest) -> HttpResponse:
             messages.error(request, "Errore nel parsing dei dati.")
             return redirect("search_home")
         
-        title = item_payload.get("title")
+        name = item_payload.get("name")
         
         # Prepare download parameters
         if download_type == "full_season":
@@ -319,7 +319,7 @@ def series_detail(request: HttpRequest) -> HttpResponse:
         
         messages.success(
             request,
-            f"Download avviato per '{title}' - {msg_detail}. "
+            f"Download avviato per '{name}' - {msg_detail}. "
             f"Il download sta procedendo in background."
         )
         

@@ -39,25 +39,6 @@ class ContentProtectionHandler:
         
         return False
     
-    def get_encryption_method(self, element: etree._Element) -> Optional[str]:
-        """
-        Extract encryption method from ContentProtection elements.
-        Returns: 'ctr', 'cbc', 'cenc', 'cbcs', 'cbc1', 'cens' or None
-        """
-        for cp in self.ns.findall(element, 'mpd:ContentProtection'):
-            scheme_id = (cp.get('schemeIdUri') or '').lower()
-            value = (cp.get('value') or '').lower()
-            
-            # Check CENC scheme with value attribute
-            if DRMSystem.CENC_SCHEME in scheme_id and value:
-                if value in ['cenc', 'cens']:
-                    return 'ctr'  # AES CTR mode
-                elif value in ['cbc1', 'cbcs']:
-                    return 'cbc'  # AES CBC mode
-                return value
-        
-        return None
-    
     def get_drm_types(self, element: etree._Element) -> List[str]:
         """Determine all DRM types from ContentProtection elements that actually have PSSH data."""
         drm_types = []
@@ -330,7 +311,6 @@ class RepresentationParser:
         # Check protection and extract default_KID and encryption method
         adapt_protected = self.protection_handler.is_protected(adapt_set)
         adapt_default_kid = self.protection_handler.extract_default_kid(adapt_set)
-        adapt_encryption_method = self.protection_handler.get_encryption_method(adapt_set)
         adapt_drm_types = self.protection_handler.get_drm_types(adapt_set)
         adapt_drm_type = self.protection_handler.get_primary_drm_type(adapt_set)
         
@@ -357,8 +337,6 @@ class RepresentationParser:
                 rep['protected'] = bool(rep_protected)
                 rep_default_kid = self.protection_handler.extract_default_kid(rep_elem) or adapt_default_kid
                 rep['default_kid'] = rep_default_kid
-                rep_encryption_method = self.protection_handler.get_encryption_method(rep_elem) or adapt_encryption_method
-                rep['encryption_method'] = rep_encryption_method
                 
                 # Get all DRM types and primary DRM type
                 rep_drm_types = self.protection_handler.get_drm_types(rep_elem) or adapt_drm_types
