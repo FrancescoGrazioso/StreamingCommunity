@@ -30,7 +30,7 @@
 - 🔍 [Global Search](#global-search)
 - 🧩 [Advanced Features](#advanced-options)
 - 🐳 [Deployment](#docker)
-- 🎓 [Tutorials](#tutorials)
+- 📝 [TODO](#todo)
 - 🔗 [Related Projects](#useful-project)
 
 ## Installation
@@ -521,6 +521,17 @@ make LOCAL_DIR=/path/to/download run-container
 ```
 
 The `run-container` command mounts also the `config.json` file, so any change to the configuration file is reflected immediately without having to rebuild the image.
+
+## TODO
+
+- [ ] **Improve GUI**  
+  Enhance the graphical user interface for better usability and appearance.
+
+- [ ] **Sync parallel audio/video downloads**  
+  Ensure audio and video streams are downloaded in parallel and properly synchronized.
+
+- [ ] **Add Crunchyroll subtitle synchronization**  
+  Implement subtitle timing alignment for Crunchyroll sources.
 
 # Useful Project
 

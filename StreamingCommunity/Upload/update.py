@@ -102,4 +102,4 @@ def update():
     if str(current_version).replace('v', '') != str(last_version).replace('v', ''):
         console.print(f"\n[cyan]New version available: [yellow]{last_version}")
     
-    time.sleep(1)
+    time.sleep(0.75)

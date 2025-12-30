@@ -7,6 +7,7 @@
 | Animeworld         | MP4         | ❌   | 1080p          | IT     |
 | Crunchyroll        | DASH        | ✅   | 1080p          | IT     |
 | Discovery          | DASH        | ✅   | 720p           | US     |
+| Discoveryeu        | DASH        | ✅   | 1080p          | EU     |
 | Dmax               | HLS         | ❌   | 1080p          | IT     |
 | Guardaserie        | HLS         | ❌   | 1080p          | IT     |
 | Hd4Me              | MEGA        | ❌   | 720p           | IT     |
@@ -20,4 +21,4 @@
 
 ---
 
-*Last updated: 2025-12-24 14:23:56*
+*Last updated: 2025-12-30 11:14:48*

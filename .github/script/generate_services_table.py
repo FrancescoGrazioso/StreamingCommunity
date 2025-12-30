@@ -72,7 +72,7 @@ def find_service_files(base_path: Path) -> List[Path]:
     init_files = []
     
     if not services_path.exists():
-        print(f"Services path not found: {services_path}")
+        print(f"Services path not found: {services_path.resolve()}")
         return init_files
     
     # Iterate through service directories
@@ -154,9 +154,9 @@ def generate_markdown_table(services: List[Tuple[str, str, bool, str, str]]) -> 
 
 def main():
     script_dir = Path(__file__).parent
-    base_path = script_dir.parent.parent.parent
+    base_path = script_dir.parent.parent
     print(f"Base path: {base_path}")
-    
+
     # Find all service __init__.py files
     init_files = find_service_files(base_path)
     print(f"Found {len(init_files)} service files")
