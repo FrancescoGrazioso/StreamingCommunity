@@ -12,7 +12,7 @@ from rich.prompt import Prompt
 # Internal utilities
 from StreamingCommunity.Util import config_manager, start_message
 from StreamingCommunity.Api.Template import site_constants, MediaItem
-from StreamingCommunity.Lib.TMDB.tmdb import tmdb
+from StreamingCommunity.Lib.TMDB import tmdb
 from StreamingCommunity.Api.Template.episode_manager import (
     manage_selection, 
     map_episode_title, 

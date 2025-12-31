@@ -26,7 +26,7 @@ logging.info("[cyan]Decryption use: Cryptodomex")
 
 
 
-class ClearKey:
+class M3U8_Decryption:
     def __init__(self, key: bytes, iv: bytes, method: str, pssh: bytes = None) -> None:
         """
         Initialize the M3U8_Decryption object.
@@ -76,6 +76,6 @@ class ClearKey:
         elif self.method == "AES-128-CTR":
             decrypted_content = self.cipher.decrypt(ciphertext)
         else:
-            raise ValueError("Invalid or unsupported method: {}".format(self.method))
+            raise ValueError(f"Invalid or unsupported method: {self.method}")
 
         return decrypted_content

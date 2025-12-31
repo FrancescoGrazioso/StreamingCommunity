@@ -517,7 +517,7 @@ class MPD_Segments:
         is_mp4_segments = seg_type == "mp4" and self._has_varying_segment_urls(self.selected_representation.get('segment_urls', []))
         
         if is_mp4_segments:
-            console.print("[yellow]Concatenating MP4 segments with moof/mdat extraction...")
+            console.print("[yellow]Concatenating MP4 with moof/mdat ...")
             
             # Write VIDEO0.mp4 fully, then only moof/mdat from VIDEO1+.mp4
             with open(concat_path, 'wb') as outfile:
@@ -539,7 +539,7 @@ class MPD_Segments:
                                 outfile.write(atom)
         
         else:
-            console.print("[yellow]Concatenating m4s segments...")
+            console.print("[yellow]Concatenating m4s ...")
             with open(concat_path, 'ab') as outfile:
                 for idx in range(total_segments):
                     temp_file = os.path.join(temp_dir, f"seg_{idx:06d}.tmp")

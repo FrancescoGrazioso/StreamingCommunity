@@ -249,8 +249,6 @@ class ConfigManager:
             with open(self.login_file_path, 'r') as f:
                 self._login_data.clear()
                 self._login_data.update(json.load(f))
-            
-            console.print("[green]Login configuration loaded successfully")
                 
         except json.JSONDecodeError as e:
             console.print(f"[red]Error parsing login JSON: {str(e)}")

@@ -23,7 +23,7 @@ from StreamingCommunity.Util.os import get_wvd_path
 
 
 # Logic class
-from ..DASH.extractor import ClearKey
+from .decrypt import M3U8_Decryption
 from .estimator import M3U8_Ts_Estimator
 from .parser import M3U8_Parser
 from .url_fixer import M3U8_UrlFix
@@ -68,7 +68,7 @@ class M3U8_Segments:
         self.enable_retry = ENABLE_RETRY
 
         # Util class
-        self.decryption: ClearKey = None 
+        self.decryption: M3U8_Decryption = None 
         self.class_ts_estimator = M3U8_Ts_Estimator(0, self) 
         self.class_url_fixer = M3U8_UrlFix(url)
 
@@ -118,7 +118,7 @@ class M3U8_Segments:
 
         if m3u8_parser.keys:
             key = self.__get_key__(m3u8_parser)
-            self.decryption = ClearKey(key, m3u8_parser.keys.get('iv'), m3u8_parser.keys.get('method'), m3u8_parser.keys.get('pssh'))
+            self.decryption = M3U8_Decryption(key, m3u8_parser.keys.get('iv'), m3u8_parser.keys.get('method'), m3u8_parser.keys.get('pssh'))
 
         segments = [
             self.class_url_fixer.generate_full_url(seg) if "http" not in seg else seg
@@ -127,7 +127,7 @@ class M3U8_Segments:
         self.segments = segments
         self.stream_type = self.get_type_stream(self.segments)
         self.class_ts_estimator.total_segments = len(self.segments)
-        console.log(f"[cyan]Detected stream type: [green]{self.stream_type}")
+        console.log(f"[cyan]Detected stream type: [green]{str(self.stream_type).upper()}")
         
     def get_segments_count(self) -> int:
         """
@@ -350,6 +350,7 @@ class M3U8_Segments:
         """
         Concatenate all segment files in order to the final output file.
         """
+        console.print("\n[yellow]Concatenating TS ...")
         with open(output_path, 'ab') as outfile:
             for idx in range(len(self.segments)):
                 temp_file = self._get_temp_segment_path(temp_dir, idx)

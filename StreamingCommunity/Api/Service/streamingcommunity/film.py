@@ -10,7 +10,7 @@ from rich.console import Console
 # Internal utilities
 from StreamingCommunity.Util import os_manager, config_manager, start_message
 from StreamingCommunity.Api.Template import site_constants, MediaItem
-from StreamingCommunity.Lib.TMDB.tmdb import tmdb
+from StreamingCommunity.Lib.TMDB import tmdb
 from StreamingCommunity.Lib.HLS import HLS_Downloader
 
 

@@ -99,7 +99,5 @@ def update():
         f"[yellow]donation[magenta]. Thank you!"
     )
 
-    if str(current_version).replace('v', '') != str(last_version).replace('v', ''):
+    if str(current_version).lower().replace("v.", "").replace("v", "") != str(last_version).lower().replace("v.", "").replace("v", ""):
         console.print(f"\n[cyan]New version available: [yellow]{last_version}")
-    
-    time.sleep(0.75)
