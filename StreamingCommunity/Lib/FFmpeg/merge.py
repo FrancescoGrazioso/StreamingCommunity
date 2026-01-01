@@ -30,6 +30,7 @@ PARAM_VIDEO = config_manager.config.get_list("M3U8_CONVERSION", "param_video")
 PARAM_AUDIO = config_manager.config.get_list("M3U8_CONVERSION", "param_audio")
 PARAM_FINAL = config_manager.config.get_list("M3U8_CONVERSION", "param_final")
 SUBTITLE_DISPOSITION = config_manager.config.get_bool("M3U8_CONVERSION", "subtitle_disposition")
+SUBTITLE_DISPOSITION_LANGUAGE = config_manager.config.get("M3U8_CONVERSION", "subtitle_disposition_language")
 
 
 def add_encoding_params(ffmpeg_cmd: List[str]):
@@ -200,9 +201,21 @@ def join_subtitle(video_path: str, subtitles_list: List[Dict[str, str]], out_pat
     # For subtitles, we always use copy for video/audio
     ffmpeg_cmd.extend(['-c:v', 'copy', '-c:a', 'copy', '-c:s', subtitle_codec])
     
-    # Set disposition for first subtitle if enabled
+    # Set disposition for subtitle matching the configured language
     if SUBTITLE_DISPOSITION and len(subtitles_list) > 0:
-        ffmpeg_cmd.extend(['-disposition:s:0', 'default+forced'])
+        disposition_idx = None
+        for idx, subtitle in enumerate(subtitles_list):
+            if subtitle.get('language', '').lower() == SUBTITLE_DISPOSITION_LANGUAGE.lower():
+                disposition_idx = idx
+                break
+        
+        # If matching subtitle found, set disposition, otherwise use first subtitle
+        if disposition_idx is not None:
+            console.log(f"[cyan]Setting subtitle disposition for language: [red]{SUBTITLE_DISPOSITION_LANGUAGE}")
+            ffmpeg_cmd.extend([f'-disposition:s:{disposition_idx}', 'default+forced'])
+        else:
+            console.log(f"[cyan]Using first subtitle for disposition.")
+            ffmpeg_cmd.extend(['-disposition:s:0', 'default+forced'])
     
     # Overwrite
     ffmpeg_cmd += [out_path, "-y"]

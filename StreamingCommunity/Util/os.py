@@ -1,6 +1,7 @@
 # 24.01.24
 
 import os
+import time
 import shutil
 import logging
 import platform
@@ -14,6 +15,7 @@ from pathvalidate import sanitize_filename, sanitize_filepath
 
 
 # Internal utilities
+from .config_json import config_manager
 from .installer import check_ffmpeg, check_bento4_tools, check_device_wvd_path, check_device_prd_path, check_megatools
 from StreamingCommunity.Lib.DASH.extractor.ex_widevine import get_info_wvd
 from StreamingCommunity.Lib.DASH.extractor.ex_playready import get_info_prd
@@ -22,6 +24,7 @@ from StreamingCommunity.Lib.DASH.extractor.ex_playready import get_info_prd
 # Variable
 msg = Prompt()
 console = Console()
+SHOW_DEVICE_INFO = config_manager.config.get('DEFAULT', 'show_device_info')
 
 
 class OsManager:
@@ -217,6 +220,16 @@ class OsSummary:
         self.megatools_path = check_megatools()
         self._display_binary_paths()
 
+        if self.ffmpeg_path is None or self.ffprobe_path is None:
+            console.print("[red]\nFFmpeg tools are missing or not found in PATH. Some functionalities may not work properly.")
+            time.sleep(5)
+        if self.bento4_decrypt_path is None or self.bento4_dump_path is None:
+            console.print("[red]\nBento4 tools are missing or not found in PATH. Some functionalities may not work properly.")
+            time.sleep(5)
+        if self.megatools_path is None:
+            console.print("[red]\nMegatools is missing or not found in PATH. Some functionalities may not work properly.")
+            time.sleep(5)
+            
     def _display_binary_paths(self):
         """Display the paths of all detected binaries."""
         paths = {
@@ -232,10 +245,11 @@ class OsSummary:
             path_strings.append(f"[red]{name} [yellow]{path_str}")
         
         console.print(f"[cyan]Utilities: {', [white]'.join(path_strings)}")
-        if self.wvd_path:
-            get_info_wvd(self.wvd_path)
-        if self.prd_path:
-            get_info_prd(self.prd_path)
+        if SHOW_DEVICE_INFO:
+            if self.wvd_path:
+                get_info_wvd(self.wvd_path)
+            if self.prd_path:
+                get_info_prd(self.prd_path)
 
 
 # Initialize the os_summary, internet_manager, and os_manager when the module is imported

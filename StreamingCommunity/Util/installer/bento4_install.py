@@ -37,7 +37,6 @@ def check_bento4_binary(binary_name: str) -> Optional[str]:
         return binary_local
 
     # STEP 3: Download
-    console.print(f"[red]{binary_exec} not found. Downloading ...")
     binary_downloaded = binary_paths.download_binary("bento4", binary_exec)
 
     if binary_downloaded:
@@ -53,12 +52,11 @@ def check_bento4_tools() -> Optional[Tuple[str, str]]:
 
     Returns:
         Tuple[str, str]: (mp4decrypt_path, mp4dump_path)
-        None if one of them is missing
     """
     mp4decrypt_path = check_bento4_binary("mp4decrypt")
     mp4dump_path = check_bento4_binary("mp4dump")
 
     if not mp4decrypt_path or not mp4dump_path:
-        return None
+        return None, None
 
     return mp4decrypt_path, mp4dump_path

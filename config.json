@@ -2,7 +2,8 @@
     "DEFAULT": {
         "debug": false,
         "show_message": true,
-        "fetch_domain_online": true
+        "fetch_domain_online": true,
+        "show_device_info": true
     },
     "OUT_FOLDER": {
         "root_path": "Video",
@@ -34,6 +35,7 @@
         "param_video": ["-c:v", "libx265", "-crf", "28", "-preset", "medium"],
         "param_audio": ["-c:a", "libopus", "-b:a", "128k"],
         "subtitle_disposition": false,
+        "subtitle_disposition_language": "ita",
         "param_final": ["-c", "copy"],
         "force_resolution": "Best",
         "extension": "mkv"
