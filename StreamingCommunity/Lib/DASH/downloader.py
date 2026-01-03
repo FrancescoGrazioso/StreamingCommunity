@@ -12,6 +12,7 @@ from rich.console import Console
 
 
 # Internal utilities
+from StreamingCommunity.Lib.FFmpeg.merge import join_audios, join_video, join_subtitle
 from StreamingCommunity.Util import config_manager, os_manager, internet_manager
 from StreamingCommunity.Util.os import get_wvd_path, get_prd_path
 from StreamingCommunity.Util.http_client import create_client, get_userAgent
@@ -22,11 +23,6 @@ from ..MPD import MPD_Parser, DRMSystem
 from .segments import MPD_Segments
 from .decrypt import decrypt_with_mp4decrypt
 from .extractor import get_widevine_keys, get_playready_keys, map_keys_to_representations
-
-
-# FFmpeg functions
-from StreamingCommunity.Lib.FFmpeg.util import print_duration_table
-from StreamingCommunity.Lib.FFmpeg.merge import join_audios, join_video, join_subtitle
 
 
 # Config
@@ -76,6 +72,7 @@ class DASH_Downloader:
         self.error = None
         self.stopped = False
         self.output_file = None
+        self.last_merge_result = None
         
         # For progress tracking
         self.current_downloader: Optional[MPD_Segments] = None
@@ -563,10 +560,12 @@ class DASH_Downloader:
         try:
             if os.path.exists(video_file) and os.path.exists(audio_file):
                 audio_tracks = [{"path": audio_file}]
-                merged_file, use_shortest = join_audios(video_file, audio_tracks, output_file)
+                merged_file, use_shortest, result_json = join_audios(video_file, audio_tracks, output_file)
+                self.last_merge_result = result_json
                 
             elif os.path.exists(video_file):
-                merged_file = join_video(video_file, output_file, codec=None)
+                merged_file, result_json = join_video(video_file, output_file)
+                self.last_merge_result = result_json
                 
             else:
                 console.print("[red]Video file missing, cannot export")
@@ -600,11 +599,12 @@ class DASH_Downloader:
                 temp_output = output_file.replace(f'.{EXTENSION_OUTPUT}', f'_temp.{EXTENSION_OUTPUT}')
                 
                 try:
-                    final_file = join_subtitle(
+                    final_file, result_json = join_subtitle(
                         video_path=merged_file,
                         subtitles_list=existing_sub_tracks,
                         out_path=temp_output
                     )
+                    self.last_merge_result = result_json
                     
                     # Replace original with subtitled version
                     if os.path.exists(final_file):
@@ -626,7 +626,7 @@ class DASH_Downloader:
 
         # Display file information
         file_size = internet_manager.format_file_size(os.path.getsize(output_file))
-        duration = print_duration_table(output_file, description=False, return_string=True)
+        duration = self.last_merge_result.get('time', 'N/A')
         console.print(f"[yellow]Output[white]: [red]{os.path.abspath(output_file)} \n"
             f"  [cyan]with size[white]: [red]{file_size} \n"
             f"      [cyan]and duration[white]: [red]{duration}")

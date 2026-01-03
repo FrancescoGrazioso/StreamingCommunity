@@ -1,5 +1,4 @@
-# 16.03.25
-
+# 26.11.2025
 
 # External library
 from rich.console import Console
@@ -7,22 +6,21 @@ from rich.prompt import Prompt
 
 
 # Internal utilities
-from StreamingCommunity.Api.Template import site_constants, get_select_title
-from StreamingCommunity.Api.Template.object import MediaItem
+from StreamingCommunity.Api.Template import site_constants, MediaItem, get_select_title
 
 
 # Logic
 from .site import title_search, table_show_manager, media_search_manager
-from .film import download_film
+from .series import download_series
 
 
 # Variable
-indice = 10
-_useFor = "Film_&_Serie"
+indice = 15
+_useFor = "Serie"
 _region = "IT"
 _deprecate = False
-_stream_type = "MEGA"
-_maxResolution = "720p"
+_stream_type = "HLS"
+_maxResolution = "1080p"
 _drm = False
 
 
@@ -35,33 +33,39 @@ def process_search_result(select_title, selections=None):
     Handles the search result and initiates the download for either a film or series.
     
     Parameters:
-        select_title (MediaItem): The selected media item
+        select_title (MediaItem): The selected media item. Can be None if selection fails.
         selections (dict, optional): Dictionary containing selection inputs that bypass manual input
-                                    {'season': season_selection, 'episode': episode_selection}
-
+                                    e.g., {'season': season_selection, 'episode': episode_selection}
     Returns:
         bool: True if processing was successful, False otherwise
     """
     if not select_title:
         return False
-    
-    if select_title.type == 'film':
-        download_film(select_title)
+
+    if select_title.type == 'tv':
+        season_selection = None
+        episode_selection = None
+        
+        if selections:
+            season_selection = selections.get('season')
+            episode_selection = selections.get('episode')
+
+        download_series(select_title, season_selection, episode_selection)
+        media_search_manager.clear()
         table_show_manager.clear()
         return True
 
 
-# search("Game of Thrones", selections={"season": "1", "episode": "1-3"})
 def search(string_to_search: str = None, get_onlyDatabase: bool = False, direct_item: dict = None, selections: dict = None):
     """
     Main function of the application for search.
 
     Parameters:
-        string_to_search (str, optional): String to search for
-        get_onlyDatabase (bool, optional): If True, return only the database object
-        direct_item (dict, optional): Direct item to process (bypass search)
+        string_to_search (str, optional): String to search for. Can be passed from run.py.
+        get_onlyDatabase (bool, optional): If True, return only the database search manager object.
+        direct_item (dict, optional): Direct item to process (bypasses search).
         selections (dict, optional): Dictionary containing selection inputs that bypass manual input
-                                    {'season': season_selection, 'episode': episode_selection}
+                                     for series (season/episode).
     """
     if direct_item:
         select_title = MediaItem(**direct_item)

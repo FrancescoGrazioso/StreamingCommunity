@@ -12,6 +12,7 @@ from rich.prompt import Prompt
 # Internal utilities
 from StreamingCommunity.Util import config_manager, start_message
 from StreamingCommunity.Api.Template import site_constants, MediaItem
+from StreamingCommunity.Api.Template import site_constants
 from StreamingCommunity.Api.Template.episode_manager import map_episode_title
 from StreamingCommunity.Lib.HLS import HLS_Downloader
 
@@ -68,7 +69,6 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
             pass
 
     return hls_process['path'], hls_process['stopped']
-
 
 def download_episode(index_season_selected: int, scrape_serie: GetSerieInfo, download_all: bool = False, episode_selection: str = None) -> None:
     DownEpi(index_season_selected, scrape_serie, download_all, episode_selection)

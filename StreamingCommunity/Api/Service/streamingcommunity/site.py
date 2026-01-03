@@ -96,7 +96,7 @@ def title_search(query: str) -> int:
                 'slug': dict_title.get('slug'),
                 'name': dict_title.get('name'),
                 'type': dict_title.get('type'),
-                'date': date,
+                'date': date if dict_title.get('date') not in ("", None) else "1999-19-19",
                 'image': image_url
             })
             

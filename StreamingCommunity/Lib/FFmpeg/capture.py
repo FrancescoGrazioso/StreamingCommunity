@@ -20,13 +20,29 @@ console = Console()
 terminate_flag = threading.Event()
 
 
-def capture_output(process: subprocess.Popen, description: str) -> None:
+class ProgressData:
+    """Class to store the last progress data"""
+    def __init__(self):
+        self.last_data = None
+        self.lock = threading.Lock()
+    
+    def update(self, data):
+        with self.lock:
+            self.last_data = data
+    
+    def get(self):
+        with self.lock:
+            return self.last_data
+
+
+def capture_output(process: subprocess.Popen, description: str, progress_data: ProgressData) -> None:
     """
     Function to capture and print output from a subprocess.
 
     Parameters:
         - process (subprocess.Popen): The subprocess whose output is captured.
         - description (str): Description of the command being executed.
+        - progress_data (ProgressData): Object to store the last progress data.
     """
     try:
         max_length = 0
@@ -64,6 +80,10 @@ def capture_output(process: subprocess.Popen, description: str) -> None:
 
                         # Format elapsed time as HH:MM:SS
                         elapsed_formatted = format_time(elapsed_time)
+
+                        # Store progress data as JSON
+                        json_data = {'fps': fps,'speed': speed, 'time': time_processed,'bitrate': bitrate}
+                        progress_data.update(json_data)
 
                         # Construct the progress string with formatted output information
                         progress_string = (
@@ -156,18 +176,24 @@ def terminate_process(process):
         logging.error(f"Failed to terminate process: {e}")
 
 
-def capture_ffmpeg_real_time(ffmpeg_command: list, description: str) -> None:
+def capture_ffmpeg_real_time(ffmpeg_command: list, description: str) -> dict:
     """
     Function to capture real-time output from ffmpeg process.
 
     Parameters:
         - ffmpeg_command (list): The command to execute ffmpeg.
         - description (str): Description of the command being executed.
+
+    Returns:
+        dict: JSON dictionary with the last progress data containing
     """
     global terminate_flag
 
     # Clear the terminate_flag before starting a new capture
     terminate_flag.clear()
+
+    # Create progress data storage
+    progress_data = ProgressData()
 
     try:
 
@@ -175,7 +201,7 @@ def capture_ffmpeg_real_time(ffmpeg_command: list, description: str) -> None:
         process = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
 
         # Start a thread to capture and print output
-        output_thread = threading.Thread(target=capture_output, args=(process, description))
+        output_thread = threading.Thread(target=capture_output, args=(process, description, progress_data))
         output_thread.start()
 
         try:
@@ -194,3 +220,6 @@ def capture_ffmpeg_real_time(ffmpeg_command: list, description: str) -> None:
 
     except Exception as e:
         logging.error(f"Failed to start ffmpeg process: {e}")
+
+    # Return the last captured progress data
+    return progress_data.get()

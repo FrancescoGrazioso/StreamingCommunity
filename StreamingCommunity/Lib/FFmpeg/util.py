@@ -74,35 +74,6 @@ def format_duration(seconds: float) -> Tuple[int, int, int]:
     return int(hours), int(minutes), int(seconds)
 
 
-def print_duration_table(file_path: str, description: str = "Duration", return_string: bool = False):
-    """
-    Print the duration of a video file in hours, minutes, and seconds, or return it as a formatted string.
-
-    Parameters:
-        - file_path (str): The path to the video file.
-        - description (str): Optional description to be included in the output. Defaults to "Duration". If not provided, the duration will not be printed.
-        - return_string (bool): If True, returns the formatted duration string. If False, returns a dictionary with hours, minutes, and seconds.
-
-    Returns:
-        - str: The formatted duration string if return_string is True.
-        - dict: A dictionary with keys 'h', 'm', 's' representing hours, minutes, and seconds if return_string is False.
-    """
-    video_duration = get_video_duration(file_path)
-
-    if video_duration is not None:
-        hours, minutes, seconds = format_duration(video_duration)
-        formatted_duration = f"[yellow]{int(hours)}[red]h [yellow]{int(minutes)}[red]m [yellow]{int(seconds)}[red]s"
-        duration_dict = {'h': hours, 'm': minutes, 's': seconds}
-
-        if description:
-            console.print(f"[cyan]{description} for [white]([green]{os.path.basename(file_path)}[white]): {formatted_duration}")
-        else:
-            if return_string:
-                return formatted_duration
-            else:
-                return duration_dict
-
-
 def get_ffprobe_info(file_path):
     """
     Get format and codec information for a media file using ffprobe.

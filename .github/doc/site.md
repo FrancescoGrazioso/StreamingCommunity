@@ -9,8 +9,9 @@
 | Discovery          | DASH        | ✅   | 720p           | US     |
 | Discoveryeu        | DASH        | ✅   | 1080p          | EU     |
 | Dmax               | HLS         | ❌   | 1080p          | IT     |
+| Foodnetwork        | HLS         | ❌   | 1080p          | IT     |
 | Guardaserie        | HLS         | ❌   | 1080p          | IT     |
-| Hd4Me              | MEGA        | ❌   | 720p           | IT     |
+| Homegardentv       | HLS         | ❌   | 1080p          | IT     |
 | Ipersphera         | MEGA        | ❌   | 1080p          | IT     |
 | Mediasetinfinity   | DASH        | ✅   | 1080p          | IT     |
 | Nove               | HLS         | ❌   | 1080p          | IT     |
@@ -21,4 +22,4 @@
 
 ---
 
-*Last updated: 2025-12-30 11:14:48*
+*Last updated: 2026-01-02 19:40:06*

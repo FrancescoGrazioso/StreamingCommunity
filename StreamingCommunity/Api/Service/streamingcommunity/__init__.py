@@ -40,7 +40,6 @@ def process_search_result(select_title, selections=None):
     Returns:
         bool: True if processing was successful, False otherwise
     """
-    print("Selected Title:", select_title, "Selections:", selections)
     if not select_title:
         console.print("[yellow]No title selected or selection cancelled.")
         return False

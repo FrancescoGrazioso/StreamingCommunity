@@ -117,7 +117,7 @@ def title_search(query: str) -> int:
             media_search_manager.add_media({
                 'name': title,
                 'type': type_content,
-                'date': str(year) if year else "",
+                'date': str(year) if year else "1999",
                 'image': thumbnail,
                 'url': url,
             })

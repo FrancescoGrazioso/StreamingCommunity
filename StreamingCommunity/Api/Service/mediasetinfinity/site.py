@@ -82,7 +82,7 @@ def title_search(query: str) -> int:
             "name": item.get("cardTitle", "No Title"),
             "type": item_type,
             "image": None,
-            "date": date,
+            "date": date if date not in ("", None) else "1999",
             "url": item.get("cardLink", {}).get("value", "")
         })
 

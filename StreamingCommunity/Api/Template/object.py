@@ -110,19 +110,15 @@ class SeasonManager:
     
 
 class MediaItemData(TypedDict, total=False):
-    id: int                 # GENERAL
-    name: str               # GENERAL     
-    type: str               # GENERAL
-    url: str                # GENERAL
-    size: str               # GENERAL
-    score: str              # GENERAL
-    date: str               # GENERAL
-    desc: str               # GENERAL
-
-    seeder: int             # TOR
-    leecher: int            # TOR
-
-    slug: str               # SC
+    id: int
+    name: str 
+    type: str
+    url: str
+    size: str
+    score: str
+    date: str
+    desc: str
+    slug: str
     
 class MediaItemMeta(type):
     def __new__(cls, name, bases, dct):
@@ -145,19 +141,15 @@ class MediaItemMeta(type):
         return super().__new__(cls, name, bases, dct)
 
 class MediaItem(metaclass=MediaItemMeta):
-    id: int                 # GENERAL
-    name: str               # GENERAL     
-    type: str               # GENERAL
-    url: str                # GENERAL
-    size: str               # GENERAL
-    score: str              # GENERAL
-    date: str               # GENERAL
-    desc: str               # GENERAL
-
-    seeder: int             # TOR
-    leecher: int            # TOR
-
-    slug: str               # SC
+    id: int
+    name: str
+    type: str
+    url: str
+    size: str
+    score: str
+    date: str
+    desc: str
+    slug: str
  
 class MediaManager:
     def __init__(self):

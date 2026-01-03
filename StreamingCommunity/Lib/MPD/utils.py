@@ -61,24 +61,29 @@ class URLBuilder:
         if time is not None:
             template = template.replace('$Time$', str(time))
         
-        # Handle $Number$ with optional formatting (e.g., $Number%05d$)
+        # Handle $Number$ with optional formatting
         if '$Number' in template:
-            num_str = str(number if number is not None else 0)
+            import re
             
-            # Check for formatting like $Number%05d$
-            if '%0' in template and 'd$' in template:
-                start = template.find('%0')
-                end = template.find('d$', start)
-                if start != -1 and end != -1:
-                    width_str = template[start+2:end]
-                    try:
-                        width = int(width_str)
-                        num_str = str(number if number is not None else 0).zfill(width)
-                    except ValueError:
-                        pass
+            number_pattern = r'\$Number(%0(\d+)d)?\$'
+            num_value = number if number is not None else 1  # Default to 1, not 0
             
-            template = template.replace('$Number%05d$', num_str)
-            template = template.replace('$Number$', num_str)
+            match = re.search(number_pattern, template)
+            if match:
+                format_spec = match.group(1)
+                if format_spec:
+                    width_match = re.search(r'%0(\d+)d', format_spec)
+                    if width_match:
+                        width = int(width_match.group(1))
+                        num_str = str(num_value).zfill(width)
+                    else:
+                        num_str = str(num_value)
+                else:
+                    num_str = str(num_value)
+                
+                template = re.sub(number_pattern, num_str, template)
+            else:
+                template = template.replace('$Number$', str(num_value))
 
         return URLBuilder._finalize_url(base, template)
 

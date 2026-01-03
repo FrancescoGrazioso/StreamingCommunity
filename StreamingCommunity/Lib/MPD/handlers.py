@@ -222,39 +222,20 @@ class SegmentURLBuilder:
         init_template = seg_template.get('initialization')
         media_template = seg_template.get('media')
         start_number = int(seg_template.get('startNumber', 1))
-        timescale = int(seg_template.get('timescale', 1) or 1)
-        duration_attr = seg_template.get('duration')
+        timescale, duration_attr = self._get_template_attributes(seg_template)
         
         # Build init URL
         init_url = None
         if init_template:
             init_url = URLBuilder.build_url(base_url, init_template, rep_id=rep_id, bandwidth=bandwidth)
         
-        # Parse timeline
+        # Parse timeline first
         number_list, time_list = self.timeline_parser.parse(seg_template, start_number)
         
-        segment_count = 0
-        segment_duration = 0.0
-        
-        # Determine segment count
-        if time_list:
-            segment_count = len(time_list)
-        elif number_list:
-            segment_count = len(number_list)
-        elif duration_attr:
-            d = int(duration_attr)
-            segment_duration = d / float(timescale)
-            
-            if period_duration > 0 and segment_duration > 0:
-                segment_count = int((period_duration / segment_duration) + 0.5)
-            else:
-                segment_count = 100
-            
-            max_segments = min(segment_count, 20000)
-            number_list = list(range(start_number, start_number + max_segments))
-        else:
-            segment_count = 100
-            number_list = list(range(start_number, start_number + 100))
+        # Determine segment count and build number list
+        segment_count, segment_duration, number_list = self._calculate_segments(
+            time_list, number_list, duration_attr, timescale, period_duration, start_number
+        )
         
         # Build segment URLs
         segment_urls = self._build_segment_urls(
@@ -265,6 +246,41 @@ class SegmentURLBuilder:
             segment_count = len(segment_urls)
         
         return init_url, segment_urls, segment_count, segment_duration
+    
+    def _get_template_attributes(self, seg_template: etree._Element) -> Tuple[int, Optional[str]]:
+        """Get timescale and duration with proper inheritance from parent"""
+        timescale = int(seg_template.get('timescale', 1) or 1)
+        duration_attr = seg_template.get('duration')
+        
+        # Check parent template if attributes are missing or default
+        if timescale == 1 or not duration_attr:
+            parent = seg_template.getparent()
+            if parent is not None:
+                for child in parent:
+                    if child.tag.endswith('SegmentTemplate'):
+                        parent_seg_template = child
+                        
+                        if timescale == 1:
+                            parent_timescale = int(parent_seg_template.get('timescale', 1) or 1)
+                            if parent_timescale > 1:
+                                timescale = parent_timescale
+                        
+                        if not duration_attr:
+                            duration_attr = parent_seg_template.get('duration')
+                        break
+        
+        return timescale, duration_attr
+    
+    def _calculate_segments(self, time_list: List[int], number_list: List[int], duration_attr: Optional[str], timescale: int, period_duration: int, start_number: int) -> Tuple[int, float, List[int]]:
+        """Calculate segment count and generate number list"""
+        if time_list:
+            return len(time_list), 0.0, number_list
+        
+        if number_list:
+            return len(number_list), 0.0, number_list
+        
+        console.print("[red]ERROR: No timeline or number list available.")
+        return 1, 0.0, number_list
     
     def _build_segment_urls(self, template: str, base_url: str, rep_id: str, bandwidth: int, number_list: List[int], time_list: List[int]) -> List[str]:
         """Build list of segment URLs"""

@@ -20,10 +20,6 @@ from StreamingCommunity.Util.http_client import create_client, get_userAgent
 from StreamingCommunity.Util import config_manager, os_manager, internet_manager, Colors
 
 
-# Logic class
-from ..FFmpeg.util import print_duration_table
-
-
 # Config
 msg = Prompt()
 console = Console()
@@ -166,10 +162,8 @@ def MP4_Downloader(url: str, path: str, referer: str = None, headers_: dict = No
         if os.path.exists(path):
             if show_final_info:
                 file_size = internet_manager.format_file_size(os.path.getsize(path))
-                duration = print_duration_table(path, description=False, return_string=True)
                 console.print(f"[yellow]Output[white]: [red]{os.path.abspath(path)} \n"
-                f"  [cyan]with size[white]: [red]{file_size} \n"
-                f"      [cyan]and duration[white]: [red]{duration}")
+                f"  [cyan]with size[white]: [red]{file_size}")
 
             return path, interrupt_handler.kill_download
         

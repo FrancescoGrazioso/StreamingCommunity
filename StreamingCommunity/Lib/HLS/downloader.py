@@ -13,12 +13,12 @@ from rich.table import Table
 
 
 # Internal utilities
+from StreamingCommunity.Lib.FFmpeg import join_video, join_audios, join_subtitle
 from StreamingCommunity.Util import config_manager, os_manager, internet_manager
 from StreamingCommunity.Util.http_client import fetch, get_userAgent
 
 
 # Logic class
-from StreamingCommunity.Lib.FFmpeg import print_duration_table, join_video, join_audios, join_subtitle
 from .parser import M3U8_Parser
 from .url_fixer import M3U8_UrlFix
 from .segments import M3U8_Segments
@@ -469,6 +469,7 @@ class MergeManager:
         self.sub_streams = sub_streams
         self.video_output_path = video_output_path
         self.audio_output_paths = audio_output_paths or {}
+        self.last_merge_result = None
 
     def _get_video_file(self) -> str:
         """Get the actual video file path from the provided output path."""
@@ -521,11 +522,11 @@ class MergeManager:
         use_shortest = False
 
         if not self.audio_streams and not self.sub_streams:
-            merged_file = join_video(
+            merged_file, result_json = join_video(
                 video_path=video_file,
-                out_path=os.path.join(self.temp_dir, f'video.{EXTENSION_OUTPUT}'),
-                codec=self.parser.codec
+                out_path=os.path.join(self.temp_dir, f'video.{EXTENSION_OUTPUT}')
             )
+            self.last_merge_result = result_json
 
         else:
             if self.audio_streams:
@@ -542,12 +543,12 @@ class MergeManager:
 
                 if existing_audio_tracks:
                     merged_audio_path = os.path.join(self.temp_dir, f'merged_audio.{EXTENSION_OUTPUT}')
-                    merged_file, use_shortest = join_audios(
+                    merged_file, use_shortest, result_json = join_audios(
                         video_path=video_file,
                         audio_tracks=existing_audio_tracks,
-                        out_path=merged_audio_path,
-                        codec=self.parser.codec
+                        out_path=merged_audio_path
                     )
+                    self.last_merge_result = result_json
 
             if MERGE_SUBTITLE and self.sub_streams:
 
@@ -563,11 +564,12 @@ class MergeManager:
 
                 if existing_sub_tracks:
                     merged_subs_path = os.path.join(self.temp_dir, f'final.{EXTENSION_OUTPUT}')
-                    merged_file = join_subtitle(
+                    merged_file, result_json = join_subtitle(
                         video_path=merged_file,
                         subtitles_list=existing_sub_tracks,
                         out_path=merged_subs_path
                     )
+                    self.last_merge_result = result_json
 
         return merged_file, use_shortest
 
@@ -727,7 +729,7 @@ class HLS_Downloader:
                 missing_info += f"[red]TS Failed: {item['nFailed']} {item['type']} tracks"
 
         file_size = internet_manager.format_file_size(os.path.getsize(self.path_manager.output_path))
-        duration = print_duration_table(self.path_manager.output_path, description=False, return_string=True)
+        duration = self.merge_manager.last_merge_result.get('time', 'N/A')
 
         # Rename output file if there were missing segments or shortest used
         new_filename = self.path_manager.output_path

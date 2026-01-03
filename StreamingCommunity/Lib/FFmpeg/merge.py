@@ -2,7 +2,6 @@
 
 import os
 import logging
-import subprocess
 from typing import List, Dict
 
 
@@ -18,13 +17,10 @@ from StreamingCommunity.Util.os import get_ffmpeg_path
 # Logic class
 from .util import need_to_force_to_ts, check_duration_v_a
 from .capture import capture_ffmpeg_real_time
-from ..HLS.parser import M3U8_Codec
 
 
 # Config
 console = Console()
-DEBUG_MODE = config_manager.config.get_bool("DEFAULT", "debug")
-DEBUG_FFMPEG = "debug" if DEBUG_MODE else "error"
 USE_GPU = config_manager.config.get_bool("M3U8_CONVERSION", "use_gpu")
 PARAM_VIDEO = config_manager.config.get_list("M3U8_CONVERSION", "param_video")
 PARAM_AUDIO = config_manager.config.get_list("M3U8_CONVERSION", "param_audio")
@@ -47,14 +43,13 @@ def add_encoding_params(ffmpeg_cmd: List[str]):
         ffmpeg_cmd.extend(PARAM_AUDIO)
 
 
-def join_video(video_path: str, out_path: str, codec: M3U8_Codec = None):
+def join_video(video_path: str, out_path: str):
     """
     Joins single ts video file to mp4
     
     Parameters:
         - video_path (str): The path to the video file.
         - out_path (str): The path to save the output file.
-        - codec (M3U8_Codec): The video codec to use (non utilizzato con nuova configurazione).
     """
     ffmpeg_cmd = [get_ffmpeg_path()]
 
@@ -77,16 +72,12 @@ def join_video(video_path: str, out_path: str, codec: M3U8_Codec = None):
     logging.info(f"FFMPEG Command: {' '.join(ffmpeg_cmd)} \n")
 
     # Run join
-    if DEBUG_MODE:
-        subprocess.run(ffmpeg_cmd, check=True)
-    else:
-        capture_ffmpeg_real_time(ffmpeg_cmd, "[yellow]FFMPEG [cyan]Join video")
-        print()
+    result_json = capture_ffmpeg_real_time(ffmpeg_cmd, "[yellow]FFMPEG [cyan]Join video")
+    print()
 
-    return out_path
+    return out_path, result_json
 
-
-def join_audios(video_path: str, audio_tracks: List[Dict[str, str]], out_path: str, codec: M3U8_Codec = None, limit_duration_diff: float = 10.0):
+def join_audios(video_path: str, audio_tracks: List[Dict[str, str]], out_path: str, limit_duration_diff: float = 10.0):
     """
     Joins audio tracks with a video file using FFmpeg.
     
@@ -95,7 +86,6 @@ def join_audios(video_path: str, audio_tracks: List[Dict[str, str]], out_path: s
         - audio_tracks (list[dict[str, str]]): A list of dictionaries containing information about audio tracks.
             Each dictionary should contain the 'path' and 'name' keys.
         - out_path (str): The path to save the output file.
-        - codec (M3U8_Codec): The video codec to use (non utilizzato con nuova configurazione).
         - limit_duration_diff (float): Maximum duration difference in seconds.
     """
     use_shortest = False
@@ -156,14 +146,10 @@ def join_audios(video_path: str, audio_tracks: List[Dict[str, str]], out_path: s
     logging.info(f"FFMPEG Command: {' '.join(ffmpeg_cmd)} \n")
 
     # Run join
-    if DEBUG_MODE:
-        subprocess.run(ffmpeg_cmd, check=True)
-    else:
-        capture_ffmpeg_real_time(ffmpeg_cmd, "[yellow]FFMPEG [cyan]Join audio")
-        print()
+    result_json = capture_ffmpeg_real_time(ffmpeg_cmd, "[yellow]FFMPEG [cyan]Join audio")
+    print()
 
-    return out_path, use_shortest
-
+    return out_path, use_shortest, result_json
 
 def join_subtitle(video_path: str, subtitles_list: List[Dict[str, str]], out_path: str):
     """
@@ -222,10 +208,7 @@ def join_subtitle(video_path: str, subtitles_list: List[Dict[str, str]], out_pat
     logging.info(f"FFMPEG Command: {' '.join(ffmpeg_cmd)} \n")
     
     # Run join
-    if DEBUG_MODE:
-        subprocess.run(ffmpeg_cmd, check=True)
-    else:
-        capture_ffmpeg_real_time(ffmpeg_cmd, "[yellow]FFMPEG [cyan]Join subtitle")
-    
+    result_json = capture_ffmpeg_real_time(ffmpeg_cmd, "[yellow]FFMPEG [cyan]Join subtitle")
     print()
-    return out_path
+    
+    return out_path, result_json

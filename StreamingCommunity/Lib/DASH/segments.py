@@ -38,7 +38,7 @@ CLEANUP_TMP = config_manager.config.get_bool('M3U8_DOWNLOAD', 'cleanup_tmp_folde
 class MPD_Segments:
     def __init__(self, tmp_folder: str, representation: dict, pssh: str = None, custom_headers: Optional[Dict[str, str]] = None):
         """
-        Initialize MPD_Segments with temp folder, representation, optional pssh, and segment limit.
+        Initialize MPD_Segments with temp folder, representation, optional pssh.
         
         Parameters:
             - tmp_folder (str): Temporary folder to store downloaded segments
@@ -55,7 +55,8 @@ class MPD_Segments:
         self.info_nFailed = 0
         
         # OTHER INFO
-        self.downloaded_segments = set()
+        self.downloaded_segments = {}  # {idx: content_bytes}
+        self.failed_segments = set()
         self.info_maxRetry = 0
         self.info_nRetry = 0
         
@@ -63,12 +64,11 @@ class MPD_Segments:
         self._last_progress_update = 0
         self._progress_update_interval = 0.1
         
-        # Segment tracking - store only metadata, not content
-        self.segment_status = {}  # {idx: {'downloaded': bool, 'size': int}}
-        self.segments_lock = asyncio.Lock()
-        
         # Estimator for progress tracking
         self.estimator: Optional[M3U8_Ts_Estimator] = None
+        
+        # Synchronization
+        self.segments_lock = asyncio.Lock()
 
     @staticmethod
     def _infer_url_ext(url: Optional[str]) -> Optional[str]:
@@ -77,46 +77,40 @@ class MPD_Segments:
         ext = Path(path).suffix
         return ext.lstrip(".").lower() if ext else None
 
+    def _get_segment_url_type(self) -> Optional[str]:
+        """Determine segment URL type based on representation data"""
+        rep = self.selected_representation or {}
+        
+        # Check explicit type first
+        explicit_type = (rep.get("segment_url_type") or "").strip().lower()
+        if explicit_type:
+            return explicit_type
+
+        segment_urls = rep.get("segment_urls") or []
+        init_url = rep.get("init_url")
+        
+        # Single URL matching init_url indicates single-file MP4
+        if len(segment_urls) == 1 and init_url and segment_urls[0] == init_url:
+            return "mp4"
+
+        # Multiple varying URLs indicate segmented content
+        if self._has_varying_segment_urls(segment_urls):
+            return "m4s"
+
+        # Infer from first URL extension
+        return self._infer_url_ext(segment_urls[0]) if segment_urls else None
+
     @staticmethod
     def _has_varying_segment_urls(segment_urls: list) -> bool:
-        """
-        Check if segment URLs represent different files (not just different query params).
-        """
+        """Check if segment URLs represent different files"""
         if not segment_urls or len(segment_urls) <= 1:
             return False
         
         # Extract base paths (without query/fragment)
-        base_paths = []
-        for url in segment_urls:
-            parsed = urlparse(url)
-            base_path = parsed.path
-            base_paths.append(base_path)
+        base_paths = [urlparse(url).path for url in segment_urls]
         
-        # If all paths are identical, URLs only differ in query params
-        unique_paths = set(base_paths)
-        return len(unique_paths) > 1
-
-    def _get_segment_url_type(self) -> Optional[str]:
-        """Prefer representation field, otherwise infer from first segment URL."""
-        rep = self.selected_representation or {}
-        t = (rep.get("segment_url_type") or "").strip().lower()
-        if t:
-            return t
-
-        segment_urls = rep.get("segment_urls") or []
-        init_url = rep.get("init_url")
-
-        # NEW: Se c'è un solo segmento e init_url == segment_url, trattalo come mp4 unico
-        if len(segment_urls) == 1 and init_url and segment_urls[0] == init_url:
-            return "mp4"
-
-        # Check if segment URLs vary (different files vs same file with different params)
-        if self._has_varying_segment_urls(segment_urls):
-            # Different files = treat as segments (m4s-like)
-            return "m4s"
-
-        # Fallback to extension inference
-        return self._infer_url_ext(segment_urls[0]) if segment_urls else None
+        # URLs vary if paths are different
+        return len(set(base_paths)) > 1
 
     def _merged_headers(self) -> Dict[str, str]:
         """Ensure UA exists while keeping caller-provided headers."""
@@ -131,7 +125,6 @@ class MPD_Segments:
         rep_id = self.selected_representation['id']
         seg_type = self._get_segment_url_type()
         
-        # Use mp4 extension for both single MP4 and MP4 segments
         if seg_type in ("mp4", "m4s"):
             ext = "mp4"
         else:
@@ -158,7 +151,7 @@ class MPD_Segments:
         concat_path = self.get_concat_path(output_dir)
         seg_type = (self._get_segment_url_type() or "").lower()
 
-        # Single-file MP4: download directly (no init/segment concat)
+        # Single-file MP4: download directly
         if seg_type == "mp4":
             rep = self.selected_representation
             url = (rep.get("segment_urls") or [None])[0] or rep.get("init_url")
@@ -202,10 +195,9 @@ class MPD_Segments:
                     "pssh": self.pssh,
                 }
 
-        # Run async download in sync mode
+        # Run async download for segmented content
         try:
             res = asyncio.run(self.download_segments(output_dir=output_dir, description=description))
-
         except KeyboardInterrupt:
             self.download_interrupted = True
             console.print("\n[red]Download interrupted by user (Ctrl+C).")
@@ -220,12 +212,13 @@ class MPD_Segments:
 
     async def download_segments(self, output_dir: str = None, concurrent_downloads: int = None, description: str = "DASH"):
         """
-        Download segments to temporary files, then concatenate them in order.
+        Download segments with parallel workers but concatenate in sequential order.
+        Uses sliding window approach: download N segments in parallel, concatenate in order.
         
         Parameters:
             - output_dir (str): Output directory for segments
             - concurrent_downloads (int): Number of concurrent downloads
-            - description (str): Description for progress bar (e.g., "Video", "Audio Italian")
+            - description (str): Description for progress bar
         """
         rep = self.selected_representation
         rep_id = rep['id']
@@ -235,11 +228,6 @@ class MPD_Segments:
         os.makedirs(output_dir or self.tmp_folder, exist_ok=True)
         concat_path = self.get_concat_path(output_dir)
 
-        # Temp directory for individual .m4s segment files (needed for concat flow)
-        temp_dir = os.path.join(output_dir or self.tmp_folder, f"{rep_id}_segments")
-        os.makedirs(temp_dir, exist_ok=True)
-
-        # Determine stream type (video/audio) for progress bar
         stream_type = description
         if concurrent_downloads is None:
             worker_type = 'video' if 'Video' in description else 'audio'
@@ -251,14 +239,11 @@ class MPD_Segments:
             bar_format=self._get_bar_format(stream_type)
         )
 
-        # Define semaphore for concurrent downloads
-        semaphore = asyncio.Semaphore(concurrent_downloads)
-
         # Initialize estimator
         self.estimator = M3U8_Ts_Estimator(total_segments=len(segment_urls) + 1)
 
-        self.segment_status = {}
-        self.downloaded_segments = set()
+        self.downloaded_segments = {}
+        self.failed_segments = set()
         self.info_nFailed = 0
         self.download_interrupted = False
         self.info_nRetry = 0
@@ -269,63 +254,44 @@ class MPD_Segments:
             limits = httpx.Limits(max_keepalive_connections=20, max_connections=100)
             
             async with httpx.AsyncClient(timeout=timeout_config, limits=limits) as client:
-                
-                # Download init segment
-                await self._download_init_segment(client, init_url, concat_path, progress_bar)
-
-                # Download all segments to temp files
-                await self._download_segments_batch(
-                    client, segment_urls, temp_dir, semaphore, REQUEST_MAX_RETRY, progress_bar
-                )
-
-                # Retry failed segments only if enabled
-                if self.enable_retry:
-                    await self._retry_failed_segments(
-                        client, segment_urls, temp_dir, semaphore, REQUEST_MAX_RETRY, progress_bar
+                with open(concat_path, 'wb') as outfile:
+                    await self._download_and_write_init(client, init_url, outfile, progress_bar)
+                    await self._download_with_sliding_window(
+                        client, segment_urls, outfile, concurrent_downloads, REQUEST_MAX_RETRY, progress_bar
                     )
-
-                # Concatenate all segments IN ORDER
-                await self._concatenate_segments_in_order(temp_dir, concat_path, len(segment_urls))
 
         except KeyboardInterrupt:
             self.download_interrupted = True
             console.print("\n[red]Download interrupted by user (Ctrl+C).")
 
         finally:
-            self._cleanup_resources(temp_dir, progress_bar)
+            progress_bar.close()
 
         self._verify_download_completion()
         return self._generate_results(stream_type)
 
-    async def _download_init_segment(self, client, init_url, concat_path, progress_bar):
+    async def _download_and_write_init(self, client, init_url, outfile, progress_bar):
         """
-        Download the init segment and update progress/estimator.
-        For MP4 segments, skip init segment as each segment is a complete MP4.
+        Download the init segment and write directly to output file.
         """
         seg_type = self._get_segment_url_type()
         
         # Skip init segment for MP4 segment files
         if seg_type == "mp4" and self._has_varying_segment_urls(self.selected_representation.get('segment_urls', [])):
-            with open(concat_path, 'wb') as outfile:
-                pass
-
             progress_bar.update(1)
             return
             
         if not init_url:
-            with open(concat_path, 'wb') as outfile:
-                pass
             return
 
         try:
             headers = self._merged_headers()
             response = await client.get(init_url, headers=headers, follow_redirects=True)
 
-            with open(concat_path, 'wb') as outfile:
-                if response.status_code == 200:
-                    outfile.write(response.content)
-                    if self.estimator:
-                        self.estimator.add_ts_file(len(response.content))
+            if response.status_code == 200:
+                outfile.write(response.content)
+                if self.estimator:
+                    self.estimator.add_ts_file(len(response.content))
 
             progress_bar.update(1)
             if self.estimator:
@@ -345,212 +311,140 @@ class MPD_Segments:
                 self.estimator.update_progress_bar(content_size, progress_bar)
             self._last_progress_update = current_time
 
-    async def _download_segments_batch(self, client, segment_urls, temp_dir, semaphore, max_retry, progress_bar):
+    async def _download_with_sliding_window(self, client, segment_urls, outfile, max_workers, max_retry, progress_bar):
         """
-        Download segments to temporary files - write immediately to disk, not memory.
+        Download segments using sliding window approach:
+        - Download max_workers segments in parallel
+        - Concatenate in sequential order as they complete
+        - Start next download when previous completes
         """
-        async def download_single(url, idx):
-            async with semaphore:
-                headers = self._merged_headers()
-                temp_file = os.path.join(temp_dir, f"seg_{idx:06d}.tmp")
-                
-                for attempt in range(max_retry):
-                    if self.download_interrupted:
-                        return idx, False, attempt, 0
-                        
-                    try:
-                        timeout = min(SEGMENT_MAX_TIMEOUT, 10 + attempt * 3)
-                        resp = await client.get(url, headers=headers, follow_redirects=True, timeout=timeout)
+        seg_type = self._get_segment_url_type()
+        is_mp4_segments = seg_type == "mp4" and self._has_varying_segment_urls(segment_urls)
+        
+        total_segments = len(segment_urls)
+        next_to_download = 0
+        next_to_write = 0
+        active_tasks = {}
+        
+        semaphore = asyncio.Semaphore(max_workers)
 
-                        # Write directly to temp file
-                        if resp.status_code == 200:
-                            content_size = len(resp.content)
-                            with open(temp_file, 'wb') as f:
-                                f.write(resp.content)
-                            
-                            # Update status
-                            async with self.segments_lock:
-                                self.segment_status[idx] = {'downloaded': True, 'size': content_size}
-                                self.downloaded_segments.add(idx)
-                            
-                            return idx, True, attempt, content_size
-                        else:
-                            if attempt < 2:
-                                sleep_time = 0.5 + attempt * 0.5
-                            else:
-                                sleep_time = min(2.0, 1.1 * (2 ** attempt))
-                            await asyncio.sleep(sleep_time)
-                            
-                    except Exception:
-                        sleep_time = min(2.0, 1.1 * (2 ** attempt))
-                        await asyncio.sleep(sleep_time)
-                
-                # Mark as failed
-                async with self.segments_lock:
-                    self.segment_status[idx] = {'downloaded': False, 'size': 0}
-                        
-                return idx, False, max_retry, 0
-
-        # Download all segments concurrently
-        tasks = [download_single(url, i) for i, url in enumerate(segment_urls)]
-
-        for coro in asyncio.as_completed(tasks):
-            try:
-                idx, success, nretry, size = await coro
-                
-                if not success:
-                    self.info_nFailed += 1
-                
-                if nretry > self.info_maxRetry:
-                    self.info_maxRetry = nretry
-                self.info_nRetry += nretry
-                    
-                progress_bar.update(1)
-                if self.estimator:
-                    self.estimator.add_ts_file(size)
-                    self._throttled_progress_update(size, progress_bar)
-
-            except KeyboardInterrupt:
-                self.download_interrupted = True
-                console.print("\n[red]Download interrupted by user (Ctrl+C).")
-                break
-
-    async def _retry_failed_segments(self, client, segment_urls, temp_dir, semaphore, max_retry, progress_bar):
-        """
-        Retry failed segments up to 3 times.
-        """
-        max_global_retries = 3
-        global_retry_count = 0
-
-        while self.info_nFailed > 0 and global_retry_count < max_global_retries and not self.download_interrupted:
-            failed_indices = [i for i in range(len(segment_urls)) if i not in self.downloaded_segments]
-            if not failed_indices:
+        while next_to_write < total_segments and not self.download_interrupted:
+            
+            # Start new downloads to fill the window
+            while next_to_download < total_segments and len(active_tasks) < max_workers:
+                idx = next_to_download
+                task = asyncio.create_task(
+                    self._download_segment_with_retry(client, segment_urls[idx], idx, max_retry, semaphore)
+                )
+                active_tasks[idx] = task
+                next_to_download += 1
+            
+            if not active_tasks:
                 break
             
-            async def download_single(url, idx):
-                async with semaphore:
-                    headers = self._merged_headers()
-                    temp_file = os.path.join(temp_dir, f"seg_{idx:06d}.tmp")
-
-                    for attempt in range(max_retry):
-                        if self.download_interrupted:
-                            return idx, False, attempt, 0
-                            
-                        try:
-                            timeout = min(SEGMENT_MAX_TIMEOUT, 15 + attempt * 5)
-                            resp = await client.get(url, headers=headers, timeout=timeout)
-                            
-                            # Write directly to temp file
-                            if resp.status_code == 200:
-                                content_size = len(resp.content)
-                                with open(temp_file, 'wb') as f:
-                                    f.write(resp.content)
-                                
-                                async with self.segments_lock:
-                                    self.segment_status[idx] = {'downloaded': True, 'size': content_size}
-                                    self.downloaded_segments.add(idx)
-                                
-                                return idx, True, attempt, content_size
-                            else:
-                                await asyncio.sleep(1.5 * (2 ** attempt))
-
-                        except Exception:
-                            await asyncio.sleep(1.5 * (2 ** attempt))
-                            
-                return idx, False, max_retry, 0
-
-            retry_tasks = [download_single(segment_urls[i], i) for i in failed_indices]
-
-            nFailed_this_round = 0
-            for coro in asyncio.as_completed(retry_tasks):
+            # Wait for the NEXT segment we need to write
+            if next_to_write in active_tasks:
+                task = active_tasks[next_to_write]
                 try:
-                    idx, success, nretry, size = await coro
-
-                    if not success:
-                        nFailed_this_round += 1
-
-                    if nretry > self.info_maxRetry:
-                        self.info_maxRetry = nretry
-                    self.info_nRetry += nretry
+                    success, content, retry_count = await task
+                    del active_tasks[next_to_write]
                     
-                    progress_bar.update(0)
-                    if self.estimator:
-                        self.estimator.add_ts_file(size)
-                        self._throttled_progress_update(size, progress_bar)
-
+                    # Update stats
+                    if retry_count > self.info_maxRetry:
+                        self.info_maxRetry = retry_count
+                    self.info_nRetry += retry_count
+                    
+                    if success and content:
+                        # Write segment in order
+                        if is_mp4_segments:
+                            if next_to_write == 0:
+                                outfile.write(content)
+                            else:
+                                for atom in self._extract_moof_mdat_from_bytes(content):
+                                    outfile.write(atom)
+                        else:
+                            outfile.write(content)
+                        
+                        content_size = len(content)
+                        if self.estimator:
+                            self.estimator.add_ts_file(content_size)
+                            self._throttled_progress_update(content_size, progress_bar)
+                    else:
+                        self.info_nFailed += 1
+                        self.failed_segments.add(next_to_write)
+                        console.print(f"[red]Segment {next_to_write} failed after {retry_count} retries")
+                    
+                    progress_bar.update(1)
+                    next_to_write += 1
+                    
                 except KeyboardInterrupt:
                     self.download_interrupted = True
                     console.print("\n[red]Download interrupted by user (Ctrl+C).")
                     break
-                    
-            self.info_nFailed = nFailed_this_round
-            global_retry_count += 1
+            else:
+                # Should not happen, but wait a bit
+                await asyncio.sleep(0.1)
 
-    def _extract_moof_mdat_atoms(self, file_path):
+    async def _download_segment_with_retry(self, client, url, idx, max_retry, semaphore):
         """
-        Extracts only 'moof' and 'mdat' atoms from a fragmented MP4 file.
+        Download a single segment with retry logic.
+        
+        Returns:
+            tuple: (success: bool, content: bytes, retry_count: int)
+        """
+        async with semaphore:
+            headers = self._merged_headers()
+            
+            for attempt in range(max_retry):
+                if self.download_interrupted:
+                    return False, None, attempt
+                
+                try:
+                    timeout = min(SEGMENT_MAX_TIMEOUT, 10 + attempt * 3)
+                    resp = await client.get(url, headers=headers, follow_redirects=True, timeout=timeout)
+
+                    if resp.status_code == 200:
+                        return True, resp.content, attempt
+                    elif resp.status_code == 404:
+                        console.print(f"[red]Segment {idx} not found (404): {url}")
+                        # Don't retry 404 errors
+                        return False, None, max_retry
+                    else:
+                        console.print(f"[yellow]Segment {idx} HTTP {resp.status_code} on attempt {attempt + 1}: {url}")
+                        if attempt < max_retry - 1:
+                            sleep_time = 0.5 + attempt * 0.5 if attempt < 2 else min(2.0, 1.1 * (2 ** attempt))
+                            await asyncio.sleep(sleep_time)
+                        
+                except Exception as e:
+                    console.print(f"[yellow]Segment {idx} error on attempt {attempt + 1}: {e}")
+                    if attempt < max_retry - 1:
+                        sleep_time = min(2.0, 1.1 * (2 ** attempt))
+                        await asyncio.sleep(sleep_time)
+            
+            return False, None, max_retry
+
+    def _extract_moof_mdat_from_bytes(self, data: bytes):
+        """
+        Extract only 'moof' and 'mdat' atoms from MP4 bytes.
         Returns a generator of bytes chunks.
         """
-        with open(file_path, 'rb') as f:
-            while True:
-                header = f.read(8)
-                if len(header) < 8:
-                    break
-
-                size, atom_type = struct.unpack(">I4s", header)
-                atom_type = atom_type.decode("ascii", errors="replace")
-                if size < 8:
-                    break  # Invalid atom
-
-                data = header + f.read(size - 8)
-                if atom_type in ("moof", "mdat"):
-                    yield data
-
-    async def _concatenate_segments_in_order(self, temp_dir, concat_path, total_segments):
-        """
-        Concatenate all segment files IN ORDER to the final output file.
-        For MP4 segments, write full init, then only moof/mdat from others.
-        For m4s segments, use init + segments approach.
-        """
-        seg_type = self._get_segment_url_type()
-        console.print(f"\n[cyan]Detected stream type: [red]{seg_type}")
-        is_mp4_segments = seg_type == "mp4" and self._has_varying_segment_urls(self.selected_representation.get('segment_urls', []))
+        offset = 0
+        data_len = len(data)
         
-        if is_mp4_segments:
-            console.print("[yellow]Concatenating MP4 with moof/mdat ...")
+        while offset < data_len:
+            if offset + 8 > data_len:
+                break
+                
+            size, atom_type = struct.unpack(">I4s", data[offset:offset+8])
+            atom_type = atom_type.decode("ascii", errors="replace")
             
-            # Write VIDEO0.mp4 fully, then only moof/mdat from VIDEO1+.mp4
-            with open(concat_path, 'wb') as outfile:
-                for idx in range(total_segments):
-                    temp_file = os.path.join(temp_dir, f"seg_{idx:06d}.tmp")
-                    if idx in self.downloaded_segments and os.path.exists(temp_file):
-                        if idx == 0:
-
-                            # Write full init segment
-                            with open(temp_file, 'rb') as infile:
-                                while True:
-                                    chunk = infile.read(8192)
-                                    if not chunk:
-                                        break
-                                    outfile.write(chunk)
-                        else:
-                            # Write only moof/mdat atoms
-                            for atom in self._extract_moof_mdat_atoms(temp_file):
-                                outfile.write(atom)
-        
-        else:
-            console.print("[yellow]Concatenating m4s ...")
-            with open(concat_path, 'ab') as outfile:
-                for idx in range(total_segments):
-                    temp_file = os.path.join(temp_dir, f"seg_{idx:06d}.tmp")
-                    
-                    if idx in self.downloaded_segments and os.path.exists(temp_file):
-                        with open(temp_file, 'rb') as infile:
-                            while True:
-                                chunk = infile.read(8192)
-                                if not chunk:
-                                    break
-                                outfile.write(chunk)
+            if size < 8 or offset + size > data_len:
+                break
+            
+            if atom_type in ("moof", "mdat"):
+                yield data[offset:offset+size]
+            
+            offset += size
 
     def _get_bar_format(self, description: str) -> str:
         """
@@ -566,7 +460,7 @@ class MPD_Segments:
 
     def _get_worker_count(self, stream_type: str) -> int:
         """
-        Calculate optimal parallel workers based on stream type and infrastructure.
+        Calculate optimal parallel workers based on stream type.
         """
         base_workers = {
             'video': DEFAULT_VIDEO_WORKERS,
@@ -586,10 +480,9 @@ class MPD_Segments:
 
     def _verify_download_completion(self) -> None:
         """
-        Validate final download integrity - allow partial downloads.
+        Validate final download integrity.
         """
         total = len(self.selected_representation['segment_urls'])
-        completed = getattr(self, 'downloaded_segments', set())
 
         if self.download_interrupted:
             return
@@ -597,52 +490,19 @@ class MPD_Segments:
         if total == 0:
             return
         
-        completion_rate = len(completed) / total
-        missing_count = total - len(completed)
+        completion_rate = (total - len(self.failed_segments)) / total if total > 0 else 0
+        missing_count = len(self.failed_segments)
         
-        # Allow downloads with up to 30 missing segments or 90% completion rate
         if completion_rate >= 0.90 or missing_count <= 30:
             return
-        
         else:
-            missing = sorted(set(range(total)) - completed)
+            missing = sorted(self.failed_segments)
             console.print(f"[red]Missing segments: {missing[:10]}..." if len(missing) > 10 else f"[red]Missing segments: {missing}")
 
-    def _cleanup_resources(self, temp_dir, progress_bar: tqdm) -> None:
-        """
-        Ensure resource cleanup and final reporting.
-        """
-        progress_bar.close()
-        
-        # Delete temp segment files
-        if CLEANUP_TMP and temp_dir and os.path.exists(temp_dir):
-            try:
-                for idx in range(len(self.selected_representation.get('segment_urls', []))):
-                    temp_file = os.path.join(temp_dir, f"seg_{idx:06d}.tmp")
-                    if os.path.exists(temp_file):
-                        os.remove(temp_file)
-                os.rmdir(temp_dir)
-
-            except Exception as e:
-                console.print(f"[yellow]Warning: Could not clean temp directory: {e}")
-
-        if getattr(self, 'info_nFailed', 0) > 0:
-            self._display_error_summary()
-            
-        # Clear memory
-        self.segment_status = {}
-
-    def _display_error_summary(self) -> None:
-        """
-        Generate final error report.
-        """
-        total_segments = len(self.selected_representation.get('segment_urls', []))
-        failed_indices = [i for i in range(total_segments) if i not in self.downloaded_segments]
-
-        console.print(f" [cyan]Max retries: [red]{getattr(self, 'info_maxRetry', 0)} [white]| "
-            f"[cyan]Total retries: [red]{getattr(self, 'info_nRetry', 0)} [white]| "
-            f"[cyan]Failed segments: [red]{getattr(self, 'info_nFailed', 0)} [white]| "
-            f"[cyan]Failed indices: [red]{failed_indices}")
+        if self.info_nFailed > 0:
+            console.print(f" [cyan]Max retries: [red]{self.info_maxRetry} [white]| "
+                f"[cyan]Total retries: [red]{self.info_nRetry} [white]| "
+                f"[cyan]Failed segments: [red]{self.info_nFailed}")
     
     def get_progress_data(self) -> Dict:
         """Returns current download progress data for API."""
@@ -650,7 +510,7 @@ class MPD_Segments:
             return None
             
         total = self.get_segments_count()
-        downloaded = len(self.downloaded_segments)
+        downloaded = total - len(self.failed_segments)
         percentage = (downloaded / total * 100) if total > 0 else 0
         stats = self.estimator.get_stats(downloaded, total)
         
