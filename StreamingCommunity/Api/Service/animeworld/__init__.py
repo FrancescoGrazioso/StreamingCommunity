@@ -44,18 +44,18 @@ def process_search_result(select_title, selections=None):
     if not select_title:
         return False
     
-    if select_title.type == "TV":
+    if select_title.type == "FILM":
+        download_film(select_title)
+        table_show_manager.clear()
+        return True
+        
+    else:
         episode_selection = None
         if selections:
             episode_selection = selections.get('episode')
 
         download_series(select_title, episode_selection)
         media_search_manager.clear()
-        table_show_manager.clear()
-        return True
-
-    else:
-        download_film(select_title)
         table_show_manager.clear()
         return True
 
