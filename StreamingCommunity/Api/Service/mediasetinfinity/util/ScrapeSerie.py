@@ -133,7 +133,7 @@ class GetSerieInfo:
         params = {
             'byCustomValue': "{subBrandId}{" + str(sb_id.replace('sb', '')) + "}",
             'sort': ':publishInfo_lastPublished|asc,tvSeasonEpisodeNumber|asc',
-            'range': '0-100',
+            'range': '0-200',
         }
         episode_url = f"https://feed.entertainment.tv.theplatform.eu/f/{self.public_id}/mediaset-prod-all-programs-v2"
         
