@@ -139,9 +139,8 @@ class M3U8Manager:
         try:
             content = self.client.request(self.m3u8_url)
             if not content:
-                logging.error(f"Failed to fetch M3U8 content from {self.m3u8_url}")
+                logging.error(f"Failed to fetch M3U8 content from url: '{self.m3u8_url}'")
                 sys.exit(0)
-                return False
 
             self.parser.parse_data(uri=self.m3u8_url, raw_content=content)
             self.url_fixer.set_playlist(self.m3u8_url)

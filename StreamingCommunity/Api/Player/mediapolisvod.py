@@ -1,5 +1,7 @@
 # 11.04.25
 
+import json
+
 
 # Internal utilities
 from StreamingCommunity.Util.http_client import create_client, get_headers
@@ -45,9 +47,17 @@ class VideoSource:
             if stream_response.status_code != 200:
                 return f"Error: Failed to fetch stream URL (Status: {stream_response.status_code})"
                 
-            # Extract the m3u8 URL
-            stream_data = stream_response.json()
-            m3u8_url = stream_data.get("video")[0] if "video" in stream_data else None
+            try:
+                stream_data = stream_response.json()
+                m3u8_url = stream_data.get("video")[0] if "video" in stream_data else None
+            except Exception:
+                try:
+                    response_text = stream_response.content.decode('latin-1')
+                    stream_data = json.loads(response_text)
+                    m3u8_url = stream_data.get("video")[0] if "video" in stream_data else None
+                except Exception as decode_error:
+                    return f"Error: Failed to decode response - {str(decode_error)}"
+                
             return m3u8_url
             
         except Exception as e:
