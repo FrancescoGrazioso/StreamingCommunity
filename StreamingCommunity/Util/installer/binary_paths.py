@@ -6,8 +6,12 @@ from typing import Optional
 
 
 # External library
-import requests
+import httpx
 from rich.console import Console
+
+
+# Logic
+from ..http_client import get_headers
 
 
 # Variable
@@ -65,7 +69,7 @@ class BinaryPaths:
         
         try:
             url = f"{self.github_repo}/binary_paths.json"
-            response = requests.get(url, timeout=10)
+            response = httpx.get(url, timeout=10, headers=get_headers())
             response.raise_for_status()
             self.paths_cache = response.json()
             return self.paths_cache
@@ -116,12 +120,11 @@ class BinaryPaths:
                 console.log(f"[cyan]Downloading from [red]{url} [cyan]to [yellow]{local_path}")
                 
                 try:
-                    response = requests.get(url, stream=True, timeout=60)
+                    response = httpx.get(url, timeout=60, headers=get_headers())
                     response.raise_for_status()
                     
                     with open(local_path, 'wb') as f:
-                        for chunk in response.iter_content(chunk_size=8192):
-                            f.write(chunk)
+                        f.write(response.content)
                     
                     # Set executable permission on Unix systems
                     if self.system != 'windows':
@@ -132,6 +135,4 @@ class BinaryPaths:
                     return None
         
         return None
-
-
 binary_paths = BinaryPaths()
