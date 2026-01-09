@@ -92,9 +92,11 @@ class N_m3u8DLWrapper:
                 command.extend(["--select-video", "best"])
             elif self.config.set_resolution == "worst":
                 command.extend(["--select-video", "worst"])
-            elif self.config.set_resolution.isdigit():
-                command.extend(["--select-video", f"res=*{self.config.set_resolution}*:for=best"])
+            elif self.config.set_resolution.endswith("p"):
+                num_res = str(self.config.set_resolution[:-1])
+                command.extend(["--select-video", f"res=.*{num_res}.*:for=best"])
             else:
+                print("Falling back to best video selection")
                 command.extend(["--select-video", "best"])
             
             # Select audio

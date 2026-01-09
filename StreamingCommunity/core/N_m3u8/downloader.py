@@ -90,7 +90,26 @@ class MediaDownloader:
     def get_streams_json(self) -> Dict[str, Any]:
         """Get available streams in JSON format for GUI"""
         stream_info = self.get_available_streams()
-        best_video = stream_info.video_streams[0] if stream_info.video_streams else None
+        
+        # Determine which video will be selected based on resolution config
+        selected_video = None
+        if stream_info.video_streams:
+            if self.config.set_resolution == "best":
+                selected_video = stream_info.video_streams[0]
+            elif self.config.set_resolution == "worst":
+                selected_video = stream_info.video_streams[-1]
+            elif self.config.set_resolution.endswith("p"):
+                target_height = self.config.set_resolution[:-1]
+                for stream in stream_info.video_streams:
+                    if stream.resolution and target_height in stream.resolution:
+                        selected_video = stream
+                        break
+                    
+                if not selected_video:
+                    selected_video = stream_info.video_streams[0]
+            else:
+                selected_video = stream_info.video_streams[0]
+        
         audio_langs = self.config.select_audio_lang or []
         subtitle_langs = self.config.select_subtitle_lang or []
         
@@ -98,7 +117,7 @@ class MediaDownloader:
         for stream in stream_info.streams:
             will_download = False
             if stream.type == "Video":
-                will_download = (stream == best_video)
+                will_download = (stream == selected_video)
             elif stream.type == "Audio":
                 will_download = "all" in [lang.lower() for lang in audio_langs] or any(lang.lower() == stream.language.lower() for lang in audio_langs)
             elif stream.type == "Subtitle":

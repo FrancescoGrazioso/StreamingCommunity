@@ -13,7 +13,7 @@ from StreamingCommunity.setup import get_bento4_decrypt_path, get_n_m3u8dl_re_pa
 # Variable
 THREAD_COUNT = config_manager.config.get_int("M3U8_DOWNLOAD", "thread_count")
 RETRY_COUNT = config_manager.config.get_int("M3U8_DOWNLOAD", "retry_count")
-SET_RESOLUTION = config_manager.config.get("M3U8_CONVERSION", "force_resolution")
+SET_RESOLUTION = str(config_manager.config.get("M3U8_CONVERSION", "force_resolution")).lower()
 CONCURRENT_DOWNLOAD = config_manager.config.get_bool("M3U8_DOWNLOAD", "concurrent_download")
 MAX_SPEED = config_manager.config.get("M3U8_DOWNLOAD", "max_speed")
 REQ_TIMEOUT = config_manager.config.get_int("REQUESTS", "timeout")
