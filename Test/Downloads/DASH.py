@@ -10,12 +10,12 @@ src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(src_path)
 
 
-from StreamingCommunity.Util import Logger, start_message
-from StreamingCommunity.Lib.DASH.downloader import DASH_Downloader
+from StreamingCommunity.utils import config_manager, start_message
+from StreamingCommunity.core.downloader import DASH_Downloader
 
 
 start_message()
-logger = Logger()
+conf_extension = config_manager.config.get("M3U8_CONVERSION", "extension")
 
 
 mpd_url = ''
@@ -28,12 +28,8 @@ license_ley = None
 dash_process = DASH_Downloader(
     mpd_url=mpd_url,
     license_url=license_url,
-    output_path=r".\Video\Prova.mp4"
+    output_path=fr".\Video\Prova.{conf_extension}"
 )
-dash_process.parse_manifest(custom_headers=mpd_headers)
 
-if dash_process.download_and_decrypt(custom_headers=license_headers, query_params=license_params, key=license_ley):
-    dash_process.finalize_output()
-
-status = dash_process.get_status()
-print(status)
+out_path, need_stop = dash_process.start()
+print(f"Output path: {out_path}, Need stop: {need_stop}")

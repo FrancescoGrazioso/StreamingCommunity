@@ -1,5 +1,6 @@
 # 17.12.25
 
-from .run import main
+from .cli.run import main
+
 
 main()

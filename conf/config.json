@@ -1,0 +1,52 @@
+{
+    "DEFAULT": {
+        "show_message": true,
+        "show_device_info": true,
+        "fetch_domain_online": true
+    },
+    "OUT_FOLDER": {
+        "root_path": "Video",
+        "movie_folder_name": "Movie",
+        "serie_folder_name": "Serie",
+        "anime_folder_name": "Anime",
+        "map_episode_name": "%(episode_name) S%(season)E%(episode)",
+        "add_siteName": false
+    },
+    "M3U8_DOWNLOAD": {
+        "thread_count": 8,
+        "retry_count": 6,
+        "concurrent_download": true,
+        "max_speed": "30MB",
+        "check_segments_count": false,
+        "specific_list_audio": [
+            "ita",
+            "spa",
+            "it-IT"
+        ],
+        "merge_subs": true,
+        "specific_list_subtitles": [
+            "ita",
+            "it-IT"
+        ],
+        "cleanup_tmp_folder": true
+    },
+    "M3U8_CONVERSION": {
+        "use_gpu": false,
+        "param_video": ["-c:v", "libx265", "-crf", "28", "-preset", "medium"],
+        "param_audio": ["-c:a", "libopus", "-b:a", "128k"],
+        "subtitle_disposition": false,
+        "subtitle_disposition_language": "ita",
+        "param_final": ["-c", "copy"],
+        "force_resolution": "Best",
+        "extension": "mkv"
+    },
+    "REQUESTS": {
+        "verify": false,
+        "timeout": 20,
+        "max_retry": 8
+    },
+    "HOOKS": {
+        "pre_run": [],
+        "post_run": []
+    }
+}
