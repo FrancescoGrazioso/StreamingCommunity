@@ -13,14 +13,13 @@
         "add_siteName": false
     },
     "M3U8_DOWNLOAD": {
-        "thread_count": 10,
+        "thread_count": 16,
         "retry_count": 8,
         "concurrent_download": true,
         "max_speed": "30MB",
         "check_segments_count": false,
         "specific_list_audio": [
             "ita",
-            "spa",
             "it-IT"
         ],
         "merge_subs": true,

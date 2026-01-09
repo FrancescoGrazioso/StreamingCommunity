@@ -122,13 +122,14 @@ class MediaDownloader:
                 will_download = "all" in [lang.lower() for lang in audio_langs] or any(lang.lower() == stream.language.lower() for lang in audio_langs)
             elif stream.type == "Subtitle":
                 will_download = "all" in [lang.lower() for lang in subtitle_langs] or any(lang.lower() == stream.language.lower() for lang in subtitle_langs)
-                if will_download and not self.config.select_forced_subtitles and ("[forced]" in stream.language.lower() or "[cc]" in stream.language.lower()):
+                if will_download and not self.config.select_forced_subtitles and ("[forced]" in stream.language_long.lower() or "[cc]" in stream.language_long.lower()):
                     will_download = False
             
             streams_data.append({
                 "type": stream.type, "selected": will_download, "resolution": stream.resolution,
                 "bitrate": stream.bitrate, "codec": stream.codec, "language": stream.language,
                 "lang_code": stream.lang_code if stream.lang_code != "-" else stream.language,
+                "language_long": stream.language_long if stream.language_long != "-" else stream.language,
                 "encrypted": stream.encrypted, "segments_count": stream.segments_count
             })
         

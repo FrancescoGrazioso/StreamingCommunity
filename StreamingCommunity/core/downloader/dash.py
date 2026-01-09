@@ -212,8 +212,7 @@ class DASH_Downloader:
         
         # Get final status
         status = self.media_downloader.get_status()
-        if status.video_path is None:
-            console.log("[red]Cant find video path after download")
+        console.print(f"[green]Found [cyan]n.[red]{1 if status.video_path else 0} [green]video, [cyan]n.[red]{len(status.audios_paths)} [green]audios, [cyan]n.[red]{len(status.subtitle_paths)} [green]subtitles after download.")
         
         if status.status != DownloadStatus.COMPLETED or not status.video_path:
             logging.error(f"Download failed: {status.error_message}")

@@ -170,13 +170,13 @@ class StreamParser:
     
     @staticmethod
     def _deduplicate_subtitles(streams: list) -> list:
-        """Remove duplicate subtitle streams based on language and lang_code."""
+        """Remove duplicate subtitle streams based on language, lang_code, and language_long."""
         seen_subtitles = {}
         result = []
         
         for stream in streams:
             if stream.type == "Subtitle":
-                key = (stream.language.lower(), stream.lang_code.lower())
+                key = (stream.language.lower(), stream.lang_code.lower(), stream.language_long.lower())
                 if key not in seen_subtitles:
                     seen_subtitles[key] = True
                     result.append(stream)

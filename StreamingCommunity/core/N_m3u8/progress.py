@@ -284,7 +284,7 @@ def show_streams_table(streams_data: Dict[str, Any], external_subtitles: list = 
         table.add_row(
             type_display, sel_icon, stream["resolution"] or "-",
             stream["bitrate"] or "-", stream["codec"] or "-",
-            stream["lang_code"] or "-", stream.get("language", "-"),
+            stream["lang_code"] or "-", stream.get("language_long", "-"),
             "-", str(stream["segments_count"]) if stream["segments_count"] else "-"
         )
     
