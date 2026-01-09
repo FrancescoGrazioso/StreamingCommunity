@@ -1,7 +1,7 @@
 # 17.03.25
 
-from .command.global_search import global_search
+from .command.global_search import global_search as call_global_search
 
 __all__ = [
-    "global_search",
+    "call_global_search",
 ]

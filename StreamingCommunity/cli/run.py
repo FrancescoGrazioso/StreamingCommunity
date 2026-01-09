@@ -18,7 +18,7 @@ from rich.prompt import Prompt
 
 
 # Internal utilities
-from .command import global_search
+from . import call_global_search
 from StreamingCommunity.setup import get_prd_path, get_wvd_path, get_info_wvd, get_info_prd
 from StreamingCommunity.services._base import load_search_functions
 from StreamingCommunity.services._base.loader import folder_name as lazy_loader_folder
@@ -425,7 +425,7 @@ def main():
         apply_config_updates(args)
 
         if getattr(args, 'global'):
-            global_search(args.search)
+            call_global_search(args.search)
             return
 
         input_to_function, choice_labels, module_name_to_function = build_function_mappings(search_functions)
@@ -434,7 +434,7 @@ def main():
 
         category = get_user_site_selection(args, choice_labels)
         if category == "global":
-            global_search(args.search)
+            call_global_search(args.search)
             return
 
         if category in input_to_function:
