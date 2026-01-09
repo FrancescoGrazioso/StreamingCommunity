@@ -1,4 +1,4 @@
-# 01.03.2023
+# 01.03.23
 
 from .update import update as git_update
 

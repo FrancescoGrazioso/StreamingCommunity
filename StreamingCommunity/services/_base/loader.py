@@ -96,7 +96,7 @@ def load_search_functions() -> Dict[str, LazySearchModule]:
     
     # Determine base path (calculated once)
     if getattr(sys, 'frozen', False):
-        base_path = os.path.join(sys._MEIPASS, "StreamingCommunity")
+        base_path = os.path.join(sys._MEIPASS, "StreamingCommunity", folder_name)
     else:
         base_path = os.path.dirname(os.path.dirname(__file__))
     
