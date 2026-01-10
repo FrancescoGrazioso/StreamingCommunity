@@ -62,13 +62,11 @@ class ProgressBarManager:
         if not self.progress_bars:
             return
         
-        # Get all available audio languages from stream_info
         available_audio_langs = set()
-        audio_lang_mapping = {}  # Map lowercase to display name
+        audio_lang_mapping = {}
         
         if stream_info:
             for stream in stream_info.audio_streams:
-                # Prefer lang_code over language for the key
                 key = None
                 display_name = None
                 
@@ -84,7 +82,6 @@ class ProgressBarManager:
                     if key not in audio_lang_mapping:
                         audio_lang_mapping[key] = display_name
         
-        # If using "all", create tasks for all available audio languages
         if "all" in [lang.lower() for lang in audio_langs]:
             for lang_key in available_audio_langs:
                 if lang_key not in self.audio_tasks:
@@ -98,9 +95,7 @@ class ProgressBarManager:
                         speed_value="0.00", speed_unit="MB/s"
                     )
                     self.audio_tasks[lang_key] = audio_task
-        
         else:
-            # Create tasks only for selected languages
             for lang in audio_langs:
                 lang_lower = lang.lower()
                 if lang_lower not in self.audio_tasks:
@@ -165,7 +160,6 @@ class ProgressBarManager:
      
         p = progress_data
         
-        # Determine target task by extracting language from description
         audio_lang = None
         target_task = None
         
@@ -179,22 +173,18 @@ class ProgressBarManager:
         if not audio_lang or audio_lang not in self.audio_tasks:
             if stream_info and not audio_lang:
                 for stream in stream_info.audio_streams:
-                    # Try lang_code first
                     if stream.lang_code and stream.lang_code != "-":
                         if stream.lang_code.lower() in p.description.lower():
                             audio_lang = stream.lang_code.lower()
                             break
-                    # Then try language
                     elif stream.language and stream.language != "-":
                         if stream.language.lower() in p.description.lower():
                             audio_lang = stream.language.lower()
                             break
             
-            # If still not found, use unknown
             if not audio_lang:
                 audio_lang = "unk"
         
-        # Get or create the task
         if audio_lang not in self.audio_tasks:
             audio_task = self.progress_bars.add_task(
                 f"[orange1]{self.manifest_type}[/orange1] [cyan]Audio[/cyan] [bright_magenta][{audio_lang.upper()}][/bright_magenta]",
@@ -252,7 +242,7 @@ class ProgressBarManager:
             self.progress_bars = None
 
 
-def show_streams_table(streams_data: Dict[str, Any], external_subtitles: list = None, show_full_table: bool = False) -> None:
+def show_streams_table(streams_data: Dict[str, Any], external_subtitles: list = None) -> None:
     """Show table with available streams"""
     if not streams_data.get("success"):
         console.print("[red]Unable to retrieve stream information.")
@@ -266,35 +256,39 @@ def show_streams_table(streams_data: Dict[str, Any], external_subtitles: list = 
     table.add_column("Codec", style="bright_green")
     table.add_column("Lang", style="bright_magenta")
     table.add_column("Lang_L", style="bright_blue")
+    table.add_column("Variant", style="bright_yellow")
     table.add_column("Duration", style="bright_white")
     table.add_column("Segments", style="bright_cyan", justify="right")
     
-    # Count selections
-    subtitle_disponibili = len([s for s in streams_data["streams"] if s["type"] == "Subtitle"])
-    
     for stream in streams_data["streams"]:
-        # Skip non-selected subtitles if more than 6 and show_full_table is False
-        if (stream["type"] == "Subtitle" and subtitle_disponibili > 6 and 
-            not show_full_table and not stream["selected"]):
-            continue
-        
         sel_icon = "X" if stream["selected"] else ""
         type_display = f"{stream['type']} [red]*CENC[/red]" if stream["encrypted"] else stream["type"]
         
+        variant_display = stream.get("variant", "")
+        
         table.add_row(
-            type_display, sel_icon, stream["resolution"] or "-",
-            stream["bitrate"] or "-", stream["codec"] or "-",
-            stream["lang_code"] or "-", stream.get("language_long", "-"),
-            "-", str(stream["segments_count"]) if stream["segments_count"] else "-"
+            type_display, 
+            sel_icon, 
+            stream["resolution"] or "-",
+            stream["bitrate"] or "-", 
+            stream["codec"] or "-",
+            stream["lang_code"] or "-", 
+            stream.get("language_long", "-"),
+            variant_display,
+            "-", 
+            str(stream["segments_count"]) if stream["segments_count"] else "-"
         )
     
-    # Add external subtitles
     if external_subtitles:
         for ext_sub in external_subtitles:
             table.add_row(
-                "Subtitle [yellow](Ext)[/yellow]", "X", "-", "-", "-",
+                "Subtitle [yellow](Ext)[/yellow]", 
+                "X", 
+                "-", "-", "-",
                 ext_sub.get("language", "unknown"),
-                f"Ext ({ext_sub.get('language', 'unknown')})", "-", "-"
+                f"Ext ({ext_sub.get('language', 'unknown')})", 
+                "",
+                "-", "-"
             )
     
     console.print(table)

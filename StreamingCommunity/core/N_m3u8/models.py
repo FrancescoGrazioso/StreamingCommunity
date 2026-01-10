@@ -7,7 +7,7 @@ from typing import List, Optional
 
 # Internal utilities
 from StreamingCommunity.utils import config_manager
-from StreamingCommunity.setup import get_bento4_decrypt_path, get_n_m3u8dl_re_path
+from StreamingCommunity.setup import get_bento4_decrypt_path, get_n_m3u8dl_re_path, get_ffmpeg_path
 
 
 # Variable
@@ -28,6 +28,7 @@ class Stream:
     language: str
     lang_code: str
     language_long: str = ""
+    variant: str = ""  # "CC", "Forced", "SDH", or empty for normal
     encrypted: bool = False
     duration: str = "-"
     segments_count: int = 0
@@ -91,12 +92,12 @@ class DownloadStatus(Enum):
 class DownloadConfig:
     select_audio_lang: Optional[List[str] | str] = None
     select_subtitle_lang: Optional[List[str] | str] = None
-    select_forced_subtitles: bool = False
     set_resolution: str = SET_RESOLUTION  # "best", "worst", o numero (es: "1080")
     auto_merge_tracks: bool = True
     concurrent_download: bool = CONCURRENT_DOWNLOAD
     thread_count: int = THREAD_COUNT
     retry_count: int = RETRY_COUNT
+    ffmpeg_path: str = get_ffmpeg_path()
     mp4decrypt_path: str = get_bento4_decrypt_path()
     n_m3u8dl_path: str = get_n_m3u8dl_re_path()
     max_speed: str = MAX_SPEED

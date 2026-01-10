@@ -52,10 +52,13 @@ def initialize():
     start_message(False)
 
     if SHOW_DEVICE_INFO:
-        prd_info = get_info_prd(get_prd_path())
-        wvd_info = get_info_wvd(get_wvd_path())
-        console.print(prd_info)
-        console.print(wvd_info)
+        prd_path = get_prd_path()
+        wvd_path = get_wvd_path()
+        
+        if prd_path is not None:
+            console.print(get_info_prd(prd_path))
+        if wvd_path is not None:
+            console.print(get_info_wvd(wvd_path))
     
     # Windows 7 terminal size fix
     if platform.system() == "Windows" and "7" in platform.version():

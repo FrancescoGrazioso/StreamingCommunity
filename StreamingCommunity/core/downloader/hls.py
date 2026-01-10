@@ -124,7 +124,8 @@ class HLS_Downloader:
         
         # Print summary and cleanup
         self._print_summary()
-        self._cleanup_temp_files(status)
+        if CLEANUP_TMP:
+            self._cleanup_temp_files(status)
         return self.output_path, False
 
     def _merge_files(self, status) -> Optional[str]:
@@ -213,9 +214,6 @@ class HLS_Downloader:
 
     def _cleanup_temp_files(self, status):
         """Clean up temporary files"""
-        if not CLEANUP_TMP:
-            return
-        
         files_to_remove = []
         
         # Add original downloaded files
@@ -249,9 +247,9 @@ class HLS_Downloader:
             except Exception as e:
                 logging.warning(f"Could not remove temp file {file_path}: {e}")
 
-        if CLEANUP_TMP:
-            os.remove(os.path.join(self.output_dir, "log.txt"))
-            shutil.rmtree(os.path.join(self.output_dir, "temp_analysis"))
+        # Temp log
+        os.remove(os.path.join(self.output_dir, "log.txt"))
+        shutil.rmtree(os.path.join(self.output_dir, "temp_analysis"))
 
     def _print_summary(self):
         """Print download summary"""

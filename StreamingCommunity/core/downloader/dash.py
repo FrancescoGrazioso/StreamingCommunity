@@ -187,7 +187,7 @@ class DASH_Downloader:
             use_raw_forDownload=self.use_raw_forDownload
         )
         
-        console.print("[green]Call [purple]get_streams_json() [cyan]to retrieve stream information ...")
+        console.print("[green]Call [purple]get_streams_json() [cyan]...")
         stream_info = self.media_downloader.get_available_streams()
         
         if stream_info:
@@ -206,7 +206,7 @@ class DASH_Downloader:
         # Set decryption keys on the existing MediaDownloader instance
         self.media_downloader.set_keys(self.decryption_keys if self.decryption_keys else None)
         
-        console.print("\n[green]Call [purple]start_download() [cyan]to begin downloading ...")
+        console.print("\n[green]Call [purple]start_download() [cyan]...")
         for update in self.media_downloader.start_download(show_progress=True):
             pass  # Progress is shown automatically
         
@@ -237,7 +237,8 @@ class DASH_Downloader:
         
         # Print summary and cleanup
         self._print_summary()
-        self._cleanup_temp_files(status)
+        if CLEANUP_TMP:
+            self._cleanup_temp_files(status)
         return self.output_path, False
 
     def _merge_files(self, status) -> Optional[str]:
@@ -326,9 +327,6 @@ class DASH_Downloader:
     
     def _cleanup_temp_files(self, status):
         """Clean up temporary files"""
-        if not CLEANUP_TMP:
-            return
-        
         files_to_remove = []
         
         # Add original downloaded files
@@ -362,10 +360,9 @@ class DASH_Downloader:
             except Exception as e:
                 logging.warning(f"Could not remove temp file {file_path}: {e}")
 
-        # Remove log file and folder
-        if CLEANUP_TMP:
-            os.remove(os.path.join(self.output_dir, "log.txt"))
-            shutil.rmtree(os.path.join(self.output_dir, "temp_analysis"))
+        # Temp log
+        os.remove(os.path.join(self.output_dir, "log.txt"))
+        shutil.rmtree(os.path.join(self.output_dir, "temp_analysis"))
     
     def _print_summary(self):
         """Print download summary"""

@@ -1,6 +1,7 @@
 # 10.01.26
 
 import os
+import logging
 import subprocess
 from datetime import datetime
 from urllib.parse import urlparse, urlunparse
@@ -38,7 +39,7 @@ class N_m3u8DLWrapper:
             f.write(f"[{timestamp}] {label}: {message}\n")
     
     def _find_raw_manifest(self) -> Optional[str]:
-        """Find raw manifest file (raw.m3u8 or raw.mpd) in temp_analysis folder"""
+        """Find raw manifest file in temp_analysis folder"""
         temp_analysis = os.path.join(self.output_dir, "temp_analysis")
         
         if not os.path.exists(temp_analysis):
@@ -72,14 +73,84 @@ class N_m3u8DLWrapper:
             self._log(f"Error extracting base URL: {e}", "WARN")
             return url.rsplit('/', 1)[0] + '/' if '/' in url else url
     
-    def _build_command(self, url: str, filename: str, headers: Optional[Dict[str, str]] = None, decryption_keys: Optional[List[str]] = None, skip_download: bool = False) -> List[str]:
+    def _create_jellifin_ignore(self) -> str:
+        """Create .ignore file for Jellyfin in output directory"""
+        ignore_path = os.path.join(self.output_dir, ".ignore")
+        try:
+            with open(ignore_path, 'w', encoding='utf-8') as f:
+                f.write("# Jellyfin ignore file - temporary\n")
+            return ignore_path
+        except Exception as e:
+            logging.error(f"Failed to create .ignore file: {e}")
+            return None
+    
+    def _remove_jellifin_ignore(self) -> None:
+        """Remove .ignore file after download/merge completion"""
+        ignore_path = os.path.join(self.output_dir, ".ignore")
+        try:
+            if os.path.exists(ignore_path):
+                os.remove(ignore_path)
+        except Exception as e:
+            logging.error(f"Failed to remove .ignore file: {e}")
+    
+    def _get_original_lang_codes(self, stream_info: StreamInfo, base_langs: List[str], stream_type: str) -> List[str]:
+        """Get original language codes (with forced- prefix) from base languages"""
+        if not stream_info:
+            return base_langs
+        
+        original_codes = []
+        streams = stream_info.audio_streams if stream_type == "Audio" else stream_info.subtitle_streams
+        
+        for stream in streams:
+            if any(stream.language.lower() == lang.lower() or stream.lang_code.lower() == lang.lower() 
+                   for lang in base_langs):
+                if stream.variant.lower() == "forced":
+                    original_codes.append(f"forced-{stream.language}")
+                elif stream.variant.lower() == "sdh":
+                    original_codes.append(f"sdh-{stream.language}")
+                else:
+                    original_codes.append(stream.language)
+        
+        seen = set()
+        result = []
+        for code in original_codes:
+            if code.lower() not in seen:
+                seen.add(code.lower())
+                result.append(code)
+        
+        return result if result else base_langs
+    
+    def _build_command(self, url: str, filename: str, headers: Optional[Dict[str, str]] = None, decryption_keys: Optional[List[str]] = None, skip_download: bool = False, stream_info: Optional[StreamInfo] = None) -> List[str]:
         """Build N_m3u8DL-RE command"""
         output_dir_abs = str(os.path.abspath(self.output_dir))
         
         if skip_download:
-            command = [self.config.n_m3u8dl_path, url, "--save-name", filename, "--save-dir", output_dir_abs, "--tmp-dir", output_dir_abs, "--skip-download", "--auto-select", "--write-meta-json"]
+            command = [
+                self.config.n_m3u8dl_path, url, 
+                "--save-name", filename, 
+                "--save-dir", output_dir_abs, 
+                "--tmp-dir", output_dir_abs,
+                "--ffmpeg-binary-path", self.config.ffmpeg_path,
+                "--decryption-binary-path", self.config.mp4decrypt_path,
+                "--max-speed", str(self.config.max_speed),
+                "--skip-download", 
+                "--auto-select", 
+                "--write-meta-json"
+            ]
         else:
-            command = [self.config.n_m3u8dl_path, url, "--save-name", filename, "--save-dir", output_dir_abs, "--tmp-dir", output_dir_abs, "--thread-count", str(self.config.thread_count), "--download-retry-count", str(self.config.retry_count),  "--http-request-timeout", str(self.config.req_timeout),  "--no-log",  "--check-segments-count", str(CHECK_SEGMENTS_COUNT),  "--binary-merge",  "--del-after-done"]
+            command = [
+                self.config.n_m3u8dl_path, url, 
+                "--save-name", filename, 
+                "--save-dir", output_dir_abs, 
+                "--tmp-dir", output_dir_abs, 
+                "--thread-count", str(self.config.thread_count), 
+                "--download-retry-count", str(self.config.retry_count),  
+                "--http-request-timeout", str(self.config.req_timeout),  
+                "--no-log",  
+                "--check-segments-count", str(CHECK_SEGMENTS_COUNT),  
+                "--binary-merge",  
+                "--del-after-done"
+            ]
             
             if binary_paths._detect_system().lower() == "linux":
                 command.append("--force-ansi-console")
@@ -96,7 +167,6 @@ class N_m3u8DLWrapper:
                 num_res = str(self.config.set_resolution[:-1])
                 command.extend(["--select-video", f"res=.*{num_res}.*:for=best"])
             else:
-                print("Falling back to best video selection")
                 command.extend(["--select-video", "best"])
             
             # Select audio
@@ -105,11 +175,14 @@ class N_m3u8DLWrapper:
                 
                 if len(audio_langs) == 1 and audio_langs[0].lower() == "all":
                     command.extend(["--select-audio", "all"])
-                elif len(audio_langs) > 1:
-                    audio_lang = "|".join(audio_langs)
-                    command.extend(["--select-audio", f"lang={audio_lang}:for=best{len(audio_langs)}"])
                 else:
-                    command.extend(["--select-audio", f"lang={audio_langs[0]}"])
+                    original_audio_codes = self._get_original_lang_codes(stream_info, audio_langs, "Audio") if stream_info else audio_langs
+                    
+                    if len(original_audio_codes) > 1:
+                        audio_lang = "|".join(original_audio_codes)
+                        command.extend(["--select-audio", f"lang={audio_lang}:for=all"])
+                    else:
+                        command.extend(["--select-audio", f"lang={original_audio_codes[0]}:for=all"])
             else:
                 command.append("--drop-audio")
             
@@ -119,33 +192,19 @@ class N_m3u8DLWrapper:
                 
                 if len(subtitle_langs) == 1 and subtitle_langs[0].lower() == "all":
                     command.extend(["--select-subtitle", "all"])
-                elif len(subtitle_langs) > 1:
-                    subtitle_lang = "|".join(subtitle_langs)
-                    if self.config.select_forced_subtitles:
-                        command.extend(["--select-subtitle", f"lang={subtitle_lang}:name=.*[Ff]orced.*:for=all"])
-                    else:
-                        command.extend(["--select-subtitle", f"lang={subtitle_lang}:name=^(?!.*[Ff]orced)(?!.*\\[CC\\]).*$:for=all"])
                 else:
-                    subtitle_lang = subtitle_langs[0]
-                    if self.config.select_forced_subtitles:
-                        command.extend(["--select-subtitle", f"lang={subtitle_lang}:name=.*[Ff]orced.*"])
+                    original_subtitle_codes = self._get_original_lang_codes(stream_info, subtitle_langs, "Subtitle") if stream_info else subtitle_langs
+                    
+                    if len(original_subtitle_codes) > 1:
+                        subtitle_lang = "|".join(original_subtitle_codes)
+                        command.extend(["--select-subtitle", f"lang={subtitle_lang}:for=all"])
                     else:
-                        command.extend(["--select-subtitle", f"lang={subtitle_lang}:name=^(?!.*[Ff]orced)(?!.*\\[CC\\]).*$:for=best"])
+                        command.extend(["--select-subtitle", f"lang={original_subtitle_codes[0]}:for=all"])
             
-            # Decryption keys
             if decryption_keys:
                 for key in decryption_keys:
                     command.append(f"--key={key}")
-            
-            # mp4decrypt path
-            if self.config.mp4decrypt_path:
-                command.extend(["--decryption-binary-path", self.config.mp4decrypt_path])
 
-            # Max speed 
-            if self.config.max_speed:
-                command.extend(["--max-speed", str(self.config.max_speed)])
-        
-        # Headers
         if headers:
             for key, value in headers.items():
                 command.extend(["-H", f"{key}: {value}"])
@@ -188,7 +247,6 @@ class N_m3u8DLWrapper:
                 creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
             )
             
-            # Wait for meta.json or process completion with timeout
             import time
             max_wait = 15
             start_time = time.time()
@@ -217,7 +275,6 @@ class N_m3u8DLWrapper:
                     except subprocess.TimeoutExpired:
                         process.kill()
             
-            # Parse from meta.json file
             if os.path.exists(meta_path):
                 manifest_type_hint = None
                 raw_mpd = os.path.join(self.output_dir, "temp_analysis", "raw.mpd")
@@ -239,6 +296,7 @@ class N_m3u8DLWrapper:
         
     def download(self, url: str, filename: str, headers: Optional[Dict[str, str]] = None, decryption_keys: Optional[List[str]] = None, stream_info: Optional[StreamInfo] = None) -> Generator[Dict[str, Any], None, None]:
         """Download the media and yield progress updates"""
+        self._create_jellifin_ignore()
         
         if stream_info is None:
             stream_info = self.get_available_streams(url, headers)
@@ -257,12 +315,12 @@ class N_m3u8DLWrapper:
             base_url = self._extract_base_url(url)
             self._log(f"Using raw file with base URL: {base_url}", "INFO")
 
-            command = self._build_command(input_source, filename, headers, decryption_keys)
+            command = self._build_command(input_source, filename, headers, decryption_keys, stream_info=stream_info)
             command.insert(2, "--base-url")
             command.insert(3, base_url)
         else:
             self._log(f"Using original URL for download: {url}", "INFO")
-            command = self._build_command(url, filename, headers, decryption_keys)
+            command = self._build_command(url, filename, headers, decryption_keys, stream_info=stream_info)
         
         self._log(" ".join(command), "DOWNLOAD_START")
         yield {"status": "starting"}
@@ -298,6 +356,8 @@ class N_m3u8DLWrapper:
                         process.wait(timeout=3)
                     except subprocess.TimeoutExpired:
                         process.kill()
+                    
+                    self._remove_jellifin_ignore()
                     yield {"status": "failed", "error": "404 Not Found", "has_404": True}
                     return
                 
@@ -328,10 +388,12 @@ class N_m3u8DLWrapper:
                 error_lines = [line for line in buffer if any(kw in line for kw in ["ERROR", "WARN", "Failed", "404"])]
                 error_msg = "\n".join(error_lines[-5:]) if error_lines else "Unknown error"
                 self._log(f"Download failed with exit code {process.returncode}: {error_msg}", "ERROR")
+                self._remove_jellifin_ignore()
                 yield {"status": "failed", "error": f"N_m3u8DL-RE failed with exit code {process.returncode}\n{error_msg}"}
                 return
             
             # Download successful
+            self._remove_jellifin_ignore()
             result = FileUtils.find_downloaded_files(
                 self.output_dir,
                 filename,
@@ -349,6 +411,8 @@ class N_m3u8DLWrapper:
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait()
+            
+            self._remove_jellifin_ignore()
             yield {"status": "cancelled"}
             raise
 
@@ -361,5 +425,7 @@ class N_m3u8DLWrapper:
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait()
+
+            self._remove_jellifin_ignore()
             yield {"status": "failed", "error": str(e)}
             raise

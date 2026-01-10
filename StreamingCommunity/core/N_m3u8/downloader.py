@@ -23,7 +23,6 @@ from .utils import FileUtils
 
 # Variable
 console = Console()
-show_full_table = False
 
 
 class MediaDownloader:
@@ -35,35 +34,22 @@ class MediaDownloader:
         self.decryption_keys = decryption_keys
         self.external_subtitles = external_subtitles or []
         
-        # Configuration and status
         self.config = DownloadConfig()
         self.status_info = DownloadStatusInfo()
         self.stream_info: Optional[StreamInfo] = None
         
-        # Audio/subtitle selection tracking
         self.audio_disponibili = 0
         self.audio_selezionati = 0
         self.subtitle_disponibili = 0
         self.subtitle_selezionati = 0
         
-        # Real-time download statistics for GUI API
         self._current_video_progress = None
         self._current_audio_progress = None
         self._download_start_time = None
         self._is_downloading = False
     
     def configure(self, **kwargs) -> None:
-        """Configuration for the downloader.
-        
-        Args:
-            - select_audio_lang: List[str] - audio languages to download
-            - select_subtitle_lang: List[str] - subtitle languages to download
-            - select_forced_subtitles: bool - download forced subtitles
-            - auto_merge_tracks: bool - merge tracks into a single file
-            - concurrent_download: bool - simultaneous video+audio download
-            - enable_logging: bool - enable logging to file
-            - use_raw_forDownload: bool - if True use raw file + base-url, if False use original URL directly (default: False)
-        """
+        """Configuration for the downloader"""
         for key, value in kwargs.items():
             if hasattr(self.config, key):
                 setattr(self.config, key, value)
@@ -80,7 +66,6 @@ class MediaDownloader:
             if os.path.exists(meta_path):
                 self.stream_info = StreamParser.parse_stream_info_from_json(meta_path)
             
-            # If meta.json not found, get from wrapper
             if not self.stream_info or not self.stream_info.streams:
                 wrapper = N_m3u8DLWrapper(self.config, self.output_dir)
                 self.stream_info = wrapper.get_available_streams(self.url, self.headers)
@@ -91,7 +76,9 @@ class MediaDownloader:
         """Get available streams in JSON format for GUI"""
         stream_info = self.get_available_streams()
         
-        # Determine which video will be selected based on resolution config
+        if not stream_info or not stream_info.streams:
+            return {"success": False, "error": "No stream info available"}
+        
         selected_video = None
         if stream_info.video_streams:
             if self.config.set_resolution == "best":
@@ -104,7 +91,6 @@ class MediaDownloader:
                     if stream.resolution and target_height in stream.resolution:
                         selected_video = stream
                         break
-                    
                 if not selected_video:
                     selected_video = stream_info.video_streams[0]
             else:
@@ -119,39 +105,67 @@ class MediaDownloader:
             if stream.type == "Video":
                 will_download = (stream == selected_video)
             elif stream.type == "Audio":
-                will_download = "all" in [lang.lower() for lang in audio_langs] or any(lang.lower() == stream.language.lower() for lang in audio_langs)
+                will_download = "all" in [lang.lower() for lang in audio_langs] or any(
+                    lang.lower() == stream.language.lower() or lang.lower() == stream.lang_code.lower() 
+                    for lang in audio_langs
+                )
             elif stream.type == "Subtitle":
-                will_download = "all" in [lang.lower() for lang in subtitle_langs] or any(lang.lower() == stream.language.lower() for lang in subtitle_langs)
-                if will_download and not self.config.select_forced_subtitles and ("[forced]" in stream.language_long.lower() or "[cc]" in stream.language_long.lower()):
-                    will_download = False
+                will_download = "all" in [lang.lower() for lang in subtitle_langs] or any(
+                    lang.lower() == stream.language.lower() or lang.lower() == stream.lang_code.lower() 
+                    for lang in subtitle_langs
+                )
             
             streams_data.append({
-                "type": stream.type, "selected": will_download, "resolution": stream.resolution,
-                "bitrate": stream.bitrate, "codec": stream.codec, "language": stream.language,
+                "type": stream.type, 
+                "selected": will_download, 
+                "resolution": stream.resolution,
+                "bitrate": stream.bitrate, 
+                "codec": stream.codec, 
+                "language": stream.language,
                 "lang_code": stream.lang_code if stream.lang_code != "-" else stream.language,
                 "language_long": stream.language_long if stream.language_long != "-" else stream.language,
-                "encrypted": stream.encrypted, "segments_count": stream.segments_count
+                "variant": stream.variant,
+                "encrypted": stream.encrypted, 
+                "segments_count": stream.segments_count
             })
         
         return {
-            "success": True, "manifest_type": stream_info.manifest_type,
-            "total_streams": len(stream_info.streams), "streams": streams_data
+            "success": True, 
+            "manifest_type": stream_info.manifest_type,
+            "total_streams": len(stream_info.streams), 
+            "streams": streams_data
         }
     
     def get_download_stats(self) -> Dict[str, Any]:
         """Get real-time download statistics for GUI"""
         if not self._is_downloading:
-            return {"is_downloading": False, "status": self.status_info.status.value if self.status_info.status else "not_started"}
+            return {
+                "is_downloading": False, 
+                "status": self.status_info.status.value if self.status_info.status else "not_started"
+            }
         
-        stats = {"is_downloading": True, "status": self.status_info.status.value if self.status_info.status else "downloading"}
+        stats = {
+            "is_downloading": True, 
+            "status": self.status_info.status.value if self.status_info.status else "downloading"
+        }
         
         if self._current_video_progress:
             p = self._current_video_progress
-            stats["video"] = {"percent": min(p.percent, 100.0), "current": p.current, "total": p.total, "speed": p.speed}
+            stats["video"] = {
+                "percent": min(p.percent, 100.0), 
+                "current": p.current, 
+                "total": p.total, 
+                "speed": p.speed
+            }
         
         if self._current_audio_progress:
             p = self._current_audio_progress
-            stats["audio"] = {"percent": min(p.percent, 100.0), "current": p.current, "total": p.total, "speed": p.speed}
+            stats["audio"] = {
+                "percent": min(p.percent, 100.0), 
+                "current": p.current, 
+                "total": p.total, 
+                "speed": p.speed
+            }
         
         return stats
     
@@ -168,10 +182,10 @@ class MediaDownloader:
         self.subtitle_disponibili = len([s for s in streams_data["streams"] if s["type"] == "Subtitle"])
         self.subtitle_selezionati = len([s for s in streams_data["streams"] if s["type"] == "Subtitle" and s["selected"]])
         
-        show_streams_table(streams_data, self.external_subtitles, show_full_table)
+        show_streams_table(streams_data, self.external_subtitles)
 
     def start_download(self, show_progress: bool = True) -> Generator[Dict[str, Any], None, None]:
-        """Start the download process, yielding status updates."""
+        """Start the download process, yielding status updates"""
         self.status_info = DownloadStatusInfo()
         self.status_info.status = DownloadStatus.PARSING
         
@@ -181,12 +195,11 @@ class MediaDownloader:
         self._download_start_time = time.time()
         self._is_downloading = True
         
-        # Create output directory
         os.makedirs(self.output_dir, exist_ok=True)
         
         # Apply auto-selection if stream info is available
         if self.stream_info:
-            self._apply_auto_selection(self.stream_info)
+            self._apply_smart_selection(self.stream_info)
         
         download_wrapper = N_m3u8DLWrapper(self.config, self.output_dir)
         
@@ -199,28 +212,20 @@ class MediaDownloader:
                 self._update_status(update)
                 
                 if show_progress:
-                    # 1) Parsing - store stream info
                     if update.get("status") == "parsing" and not table_shown:
                         if "stream_info" in update:
                             table_shown = True
                             self.stream_info = update["stream_info"]
                             console.file.flush()
                     
-                    # 2) Selected streams - setup progress bars
                     elif update.get("status") == "selected" and not progress_manager:
                         protocol = self.stream_info.manifest_type if self.stream_info else "UNKNOWN"
                         progress_manager = ProgressBarManager(protocol)
                         progress_manager.setup()
                         
-                        # Add audio tasks
                         if self.config.select_audio_lang and self.stream_info:
-                            progress_manager.add_audio_task(
-                                "", 
-                                self.config.select_audio_lang,
-                                self.stream_info
-                            )
+                            progress_manager.add_audio_task("", self.config.select_audio_lang, self.stream_info)
                     
-                    # 3) Downloading - update progress
                     elif update.get("status") == "downloading" and progress_manager:
                         if "progress_video" in update:
                             self._current_video_progress = update["progress_video"]
@@ -230,13 +235,11 @@ class MediaDownloader:
                             self._current_audio_progress = update["progress_audio"]
                             progress_manager.update_audio_progress(update["progress_audio"], self.stream_info)
                     
-                    # 4) Finished
                     elif update.get("status") == "completed":
                         if progress_manager:
                             progress_manager.stop()
                         console.file.flush()
                     
-                    # 5) Failed
                     elif update.get("status") == "failed":
                         if progress_manager and not update.get("has_404", False):
                             progress_manager.stop()
@@ -271,48 +274,68 @@ class MediaDownloader:
         finally:
             self._is_downloading = False
     
-    def _apply_auto_selection(self, stream_info: StreamInfo):
-        """Auto-select audio and subtitle languages if none selected or not found"""
+    def _apply_smart_selection(self, stream_info: StreamInfo):
+        """Smart selection of audio and subtitle languages based on available streams"""
         audio_langs = [lang.lower() for lang in (self.config.select_audio_lang or [])]
         subtitle_langs = [lang.lower() for lang in (self.config.select_subtitle_lang or [])]
         
-        # Count matches
-        audio_matches = sum(1 for s in stream_info.audio_streams if s.language.lower() in audio_langs)
-        subtitle_matches = sum(1 for s in stream_info.subtitle_streams if s.language.lower() in subtitle_langs)
+        available_audio_langs = set()
+        available_subtitle_langs = set()
         
-        # Auto audio
+        for stream in stream_info.audio_streams:
+            if stream.language and stream.language != "-":
+                available_audio_langs.add(stream.language.lower())
+            if stream.lang_code and stream.lang_code != "-":
+                available_audio_langs.add(stream.lang_code.lower())
+        
+        for stream in stream_info.subtitle_streams:
+            if stream.language and stream.language != "-":
+                available_subtitle_langs.add(stream.language.lower())
+            if stream.lang_code and stream.lang_code != "-":
+                available_subtitle_langs.add(stream.lang_code.lower())
+        
         if stream_info.audio_streams:
-            if audio_matches == 0 and audio_langs:
-                self.config.select_audio_lang = [stream_info.audio_streams[0].language]
-                console.log("[yellow]Auto-selecting first audio language")
-            elif not audio_langs:
-                self.config.select_audio_lang = [stream_info.audio_streams[0].language]
-                console.log("[yellow]Auto-selecting first audio language")
+            if not audio_langs or "all" in audio_langs:
+                self.config.select_audio_lang = list(available_audio_langs)
+                console.log(f"[yellow]Auto-selecting all audio languages: {', '.join(available_audio_langs)}")
+            else:
+                matched_audio = [lang for lang in audio_langs if lang in available_audio_langs]
+                
+                if not matched_audio:
+                    first_audio = stream_info.audio_streams[0]
+                    fallback_lang = first_audio.lang_code if first_audio.lang_code != "-" else first_audio.language
+                    self.config.select_audio_lang = [fallback_lang]
+                    console.log(f"[yellow]No matching audio found, auto-selecting: {fallback_lang}")
+                else:
+                    self.config.select_audio_lang = matched_audio
         
-        # Auto subtitle
         if stream_info.subtitle_streams:
-            if subtitle_matches == 0 and subtitle_langs:
-                self.config.select_subtitle_lang = [stream_info.subtitle_streams[0].language]
-                console.print("[yellow]Auto-selecting first subtitle language")
-            elif not subtitle_langs:
-                self.config.select_subtitle_lang = [stream_info.subtitle_streams[0].language]
-                console.print("[yellow]Auto-selecting first subtitle language")
+            if not subtitle_langs or "all" in subtitle_langs:
+                self.config.select_subtitle_lang = list(available_subtitle_langs)
+                console.log(f"[yellow]Auto-selecting all subtitle languages: {', '.join(available_subtitle_langs)}")
+            else:
+                matched_subtitles = [lang for lang in subtitle_langs if lang in available_subtitle_langs]
+                
+                if not matched_subtitles:
+                    first_subtitle = stream_info.subtitle_streams[0]
+                    fallback_lang = first_subtitle.lang_code if first_subtitle.lang_code != "-" else first_subtitle.language
+                    self.config.select_subtitle_lang = [fallback_lang]
+                    console.log(f"[yellow]No matching subtitles found, auto-selecting: {fallback_lang}")
+                else:
+                    self.config.select_subtitle_lang = matched_subtitles
         
     def _update_status(self, update: Dict[str, Any]) -> None:
         """Update internal status based on the update"""
         status = update.get("status")
         
-        # 1) Parsing
         if status == "parsing":
             self.status_info.status = DownloadStatus.PARSING
             if "stream_info" in update:
                 self.stream_info = update["stream_info"]
 
-        # 2) Selected / Downloading
         elif status in ["selected", "downloading"]:
             self.status_info.status = DownloadStatus.DOWNLOADING
 
-        # 3) Completed
         elif status == "completed":
             self.status_info.status = DownloadStatus.COMPLETED
             self.status_info.is_completed = True
@@ -321,14 +344,12 @@ class MediaDownloader:
             if result:
                 self._process_completed_download(result)
 
-        # 4) Failed
         elif status == "failed":
             if not update.get("has_404", False):
                 self.status_info.status = DownloadStatus.FAILED
                 self.status_info.error_message = update.get("error")
                 self._is_downloading = False
 
-        # 5) Cancelled
         elif status == "cancelled":
             self.status_info.status = DownloadStatus.CANCELLED
             self._is_downloading = False
@@ -337,26 +358,48 @@ class MediaDownloader:
         """Process downloaded files and download external subtitles"""
         self.status_info.video_path = result.video_path
         
-        # Map language codes to long names
         lang_mapping = {}
+        
         if self.stream_info:
             for stream in self.stream_info.streams:
-                if stream.type in ["Audio", "Subtitle"] and stream.language_long:
-                    if stream.language and stream.language != "-":
-                        lang_mapping[stream.language.lower()] = stream.language_long
-                    if stream.lang_code and stream.lang_code != "-":
-                        lang_mapping[stream.lang_code.lower()] = stream.language_long
+                if stream.type in ["Audio", "Subtitle"]:
+                    lang_key = stream.language.lower() if stream.language != "-" else "unknown"
+                    variant_key = stream.variant.lower() if stream.variant else ""
+                    
+                    key = (lang_key, variant_key)
+                    if key not in lang_mapping:
+                        lang_code = stream.lang_code if stream.lang_code != "-" else stream.language
+                        lang_long = stream.language_long if stream.language_long != "-" else stream.language
+                        
+                        if stream.variant:
+                            display_name = f"{lang_code} - {lang_long} [{stream.variant}]"
+                        else:
+                            display_name = f"{lang_code} - {lang_long}"
+                        
+                        lang_mapping[key] = display_name
         
-        # Audio tracks from manifest
-        self.status_info.audios_paths = [
-            {"path": track.path, "language": lang_mapping.get(track.language.lower(), track.language)}
-            for track in result.audio_tracks
-        ]
+        self.status_info.audios_paths = []
+        for track in result.audio_tracks:
+            base_lang = track.language
+            variant = ""
+            
+            if track.language.startswith("forced-"):
+                base_lang = track.language.replace("forced-", "")
+                variant = "forced"
+            elif track.language.startswith("sdh-"):
+                base_lang = track.language.replace("sdh-", "")
+                variant = "sdh"
+            
+            key = (base_lang.lower(), variant.lower())
+            display_name = lang_mapping.get(key, track.language)
+            
+            self.status_info.audios_paths.append({
+                "path": track.path,
+                "language": display_name
+            })
         
-        # Subtitles from manifest + external
         all_subtitles = list(result.subtitle_tracks)
         
-        # Download external subtitles if configured
         if self.external_subtitles and self.config.select_subtitle_lang:
             filtered_externals = [
                 ext_sub for ext_sub in self.external_subtitles
@@ -368,14 +411,33 @@ class MediaDownloader:
                 external_subs = self._download_external_subtitles(filtered_externals)
                 all_subtitles.extend(external_subs)
         
-        self.status_info.subtitle_paths = [
-            {
+        self.status_info.subtitle_paths = []
+        for track in all_subtitles:
+            basename = os.path.basename(track.path)
+            name_parts = basename.replace(self.filename, '').lstrip('.').split('.')
+            
+            file_lang_code = name_parts[0] if name_parts else track.language
+            
+            base_lang = file_lang_code
+            variant = ""
+            
+            if file_lang_code.startswith("forced-"):
+                base_lang = file_lang_code.replace("forced-", "")
+                variant = "forced"
+            elif file_lang_code.startswith("sdh-"):
+                base_lang = file_lang_code.replace("sdh-", "")
+                variant = "sdh"
+            elif len(name_parts) >= 2 and name_parts[1].lower() == base_lang.lower():
+                variant = "cc"
+            
+            key = (base_lang.lower(), variant.lower())
+            display_name = lang_mapping.get(key, track.language)
+            
+            self.status_info.subtitle_paths.append({
                 "path": track.path,
-                "language": lang_mapping.get(track.language.lower(), track.language),
+                "language": display_name,
                 "format": getattr(track, 'format', None)
-            }
-            for track in all_subtitles
-        ]
+            })
     
     def _download_external_subtitles(self, external_subtitles: List[dict]) -> List[MediaTrack]:
         """Download external subtitles from URLs"""

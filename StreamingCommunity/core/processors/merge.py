@@ -122,7 +122,7 @@ def join_video(video_path: str, out_path: str):
 
     return out_path, result_json
 
-def join_audios(video_path: str, audio_tracks: List[Dict[str, str]], out_path: str, limit_duration_diff: float = 10.0):
+def join_audios(video_path: str, audio_tracks: List[Dict[str, str]], out_path: str, limit_duration_diff: float = 20.0):
     """
     Joins audio tracks with a video file using FFmpeg.
     
@@ -139,10 +139,11 @@ def join_audios(video_path: str, audio_tracks: List[Dict[str, str]], out_path: s
         audio_path = audio_track.get('path')
         audio_lang = audio_track.get('name', 'unknown')
         is_matched, diff, video_duration, audio_duration = check_duration_v_a(video_path, audio_path)
+        console.print(f"[yellow]    - [cyan]Audio lang [red]{audio_lang}, [cyan]Path: [red]{audio_path}")
         
         # If any audio track has a significant duration difference, use -shortest
         if diff > limit_duration_diff:
-            console.print(f"[cyan]Audio track [red]'{audio_lang}' [cyan]has a duration difference of [red]{diff:.2f}s [cyan]which exceeds the limit of [red]{limit_duration_diff}s. [yellow]Using -shortest option.")
+            console.print(f"[yellow]    WARN [cyan]Audio lang: [red]'{audio_lang}' [cyan]has a duration difference of [red]{diff:.2f}s [cyan]which exceeds the limit of [red]{limit_duration_diff}s.")
             use_shortest = True
 
     # Start command with locate ffmpeg
@@ -164,6 +165,16 @@ def join_audios(video_path: str, audio_tracks: List[Dict[str, str]], out_path: s
     
     for i in range(1, len(audio_tracks) + 1):
         ffmpeg_cmd.extend(['-map', f'{i}:a'])
+
+    # Add language metadata for each audio track
+    for i, audio_track in enumerate(audio_tracks):
+        lang_code = audio_track.get('name', 'unknown')
+        
+        # Extract language code (e.g., "ita" from "ita - Italian")
+        if ' - ' in lang_code:
+            lang_code = lang_code.split(' - ')[0].strip()
+        ffmpeg_cmd.extend([f'-metadata:s:a:{i}', f'language={lang_code}'])
+        ffmpeg_cmd.extend([f'-metadata:s:a:{i}', f'title={audio_track.get("name", "unknown")}'])
 
     # Add encoding parameters (prima di -shortest e output)
     add_encoding_params(ffmpeg_cmd)
@@ -211,6 +222,7 @@ def join_subtitles(video_path: str, subtitles_list: List[Dict[str, str]], out_pa
     
     # Add subtitle maps and metadata
     for idx, subtitle in enumerate(subtitles_list):
+        console.print(f"[yellow]    - [cyan]Subtitle lang [red]{subtitle.get('language', 'unknown')}, [cyan]Path: [red]{subtitle.get('path', 'unknown')}")
         ffmpeg_cmd += ["-map", f"{idx + 1}:s"]
         ffmpeg_cmd += ["-metadata:s:s:{}".format(idx), "title={}".format(subtitle['language'])]
     
@@ -222,6 +234,7 @@ def join_subtitles(video_path: str, subtitles_list: List[Dict[str, str]], out_pa
         disposition_idx = None
         for idx, subtitle in enumerate(subtitles_list):
             if subtitle.get('language', '').lower() == SUBTITLE_DISPOSITION_LANGUAGE.lower():
+                console.log(f"[yellow]    SET [cyan] disposition: [red]{SUBTITLE_DISPOSITION_LANGUAGE}")
                 disposition_idx = idx
                 break
         

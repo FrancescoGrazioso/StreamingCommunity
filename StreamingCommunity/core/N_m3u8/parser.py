@@ -3,7 +3,7 @@
 import re
 import os
 import json
-from typing import Optional
+from typing import Optional, Tuple
 
 
 # Logic class
@@ -12,24 +12,51 @@ from .models import StreamInfo, Stream, DownloadProgress
 
 class StreamParser:
     PROGRESS = re.compile(
-        r"(Vid|Aud|Sub)\s+"                             # Stream type
-        r"([^━\-]+?)\s+"                                # Description 
-        r"[━\-\s]*"                                     # Progress bar chars (any)
-        r"(\d+)/(\d+)\s+"                               # current/total segments
-        r"([\d.]+)%"                                    # percentage
-        r"(?:\s*([\d.]+[KMGT]*B?)/?([\d.]+[KMGT]*B?))?" # optional sizes
-        r"(?:\s*([\d.]+[KMGT]*Bps))?"                   # optional speed
-        r"(?:\s*([\d:.\-]+))?"                          # optional time
+        r"(Vid|Aud|Sub)\s+"
+        r"([^\u2500\-]+?)\s+"
+        r"[\u2500\-\s]*"
+        r"(\d+)/(\d+)\s+"
+        r"([\d.]+)%"
+        r"(?:\s*([\d.]+[KMGT]*B?)/?([\d.]+[KMGT]*B?))?"
+        r"(?:\s*([\d.]+[KMGT]*Bps))?"
+        r"(?:\s*([\d:.\-]+))?"
     )
     
     @staticmethod
-    def parse_stream_info_from_json(meta_file_path, manifest_type_hint: str = None) -> StreamInfo:
-        """Parse stream info directly from meta.json file instead of log parsing
+    def _extract_variant_from_language(language_code: str) -> Tuple[str, str]:
+        """Extract base language and variant from language code."""
+        if language_code.startswith("forced-"):
+            return language_code.replace("forced-", ""), "Forced"
+        elif language_code.startswith("sdh-"):
+            return language_code.replace("sdh-", ""), "SDH"
+        elif language_code.endswith("-forced"):
+            return language_code.replace("-forced", ""), "Forced"
+        elif language_code.endswith("-sdh"):
+            return language_code.replace("-sdh", ""), "SDH"
+        return language_code, ""
+    
+    @staticmethod
+    def _extract_variant_from_name(name: str) -> Tuple[str, str]:
+        """Extract clean name and variant from name field."""
+        # Check for square brackets variants [CC], [Forced], [SDH], etc.
+        match_square = re.match(r'^(.+?)\s*\[(.+?)\]\s*$', name)
+        if match_square:
+            base_name = match_square.group(1).strip()
+            variant = match_square.group(2).strip()
+            return base_name, variant
         
-        Args:
-            meta_file_path: Path to meta.json file
-            manifest_type_hint: Optional hint about manifest type ('HLS', 'DASH', or None for auto-detect)
-        """
+        # Check for parenthesized variants (Simplified, Traditional, etc.)
+        match_paren = re.match(r'^(.+?)\s*\((.+?)\)\s*$', name)
+        if match_paren:
+            base_name = match_paren.group(1).strip()
+            variant = match_paren.group(2).strip()
+            return base_name, variant
+        
+        return name, ""
+    
+    @staticmethod
+    def parse_stream_info_from_json(meta_file_path, manifest_type_hint: str = None) -> StreamInfo:
+        """Parse stream info directly from meta.json file"""
         if not os.path.exists(meta_file_path):
             return StreamInfo("UNKNOWN", [])
         
@@ -47,33 +74,26 @@ class StreamParser:
         for item in meta_data:
             media_type = item.get("MediaType", "VIDEO").upper()
             
-            # Only auto-detect if no hint was provided
             if not manifest_type_hint and manifest_type == "UNKNOWN":
                 if "Codecs" in item and "Resolution" in item:
                     manifest_type = "DASH"
             
-            # 1) Parse VIDEO streams
+            # VIDEO streams
             if media_type == "VIDEO" or (media_type not in ["AUDIO", "SUBTITLES"] and "Resolution" in item):
                 resolution = item.get("Resolution", "Unknown")
                 bandwidth = item.get("Bandwidth", 0)
                 codecs = item.get("Codecs", "unknown")
                 segments_count = item.get("SegmentsCount", 0)
-                
-                # Convert bandwidth to Kbps
                 bitrate = f"{bandwidth // 1000} Kbps" if bandwidth else "-"
-                
-                # Check if encrypted
+
                 is_encrypted = False
                 if "Playlist" in item and "MediaInit" in item["Playlist"]:
                     encrypt_info = item["Playlist"]["MediaInit"].get("EncryptInfo", {})
                     is_encrypted = encrypt_info.get("Method") is not None
                 
-                # Get duration
                 duration = "-"
                 if "Playlist" in item and "TotalDuration" in item["Playlist"]:
                     total_duration = item["Playlist"]["TotalDuration"]
-                    
-                    # Format duration as ~XXmXXs
                     minutes = int(total_duration // 60)
                     seconds = int(total_duration % 60)
                     duration = f"~{minutes}m{seconds}s"
@@ -86,30 +106,30 @@ class StreamParser:
                     language="-",
                     lang_code="-",
                     language_long="-",
+                    variant="",
                     encrypted=is_encrypted,
                     duration=duration,
                     segments_count=segments_count
                 )
                 streams.append(stream)
             
-            # 2) Parse AUDIO streams
+            # AUDIO streams
             elif media_type == "AUDIO":
                 language = item.get("Language", "unknown")
                 name = item.get("Name", language)
                 bandwidth = item.get("Bandwidth", 0)
                 codecs = item.get("Codecs", "unknown")
                 segments_count = item.get("SegmentsCount", 0)
-                
-                # Convert bandwidth to Kbps
+                base_language, variant_from_code = StreamParser._extract_variant_from_language(language)
+                clean_name, variant_from_name = StreamParser._extract_variant_from_name(name)
+                final_variant = variant_from_code if variant_from_code else variant_from_name
                 bitrate = f"{bandwidth // 1000} Kbps" if bandwidth else "-"
                 
-                # Check if encrypted
                 is_encrypted = False
                 if "Playlist" in item and "MediaInit" in item["Playlist"]:
                     encrypt_info = item["Playlist"]["MediaInit"].get("EncryptInfo", {})
                     is_encrypted = encrypt_info.get("Method") is not None
                 
-                # Get duration
                 duration = "-"
                 if "Playlist" in item and "TotalDuration" in item["Playlist"]:
                     total_duration = item["Playlist"]["TotalDuration"]
@@ -122,28 +142,30 @@ class StreamParser:
                     resolution="-",
                     bitrate=bitrate,
                     codec=codecs,
-                    language=language,
-                    lang_code=language,
-                    language_long=name,
+                    language=base_language,
+                    lang_code=base_language,
+                    language_long=clean_name,
+                    variant=final_variant,
                     encrypted=is_encrypted,
                     duration=duration,
                     segments_count=segments_count
                 )
                 streams.append(stream)
             
-            # 3) Parse SUBTITLE streams
+            # SUBTITLE streams
             elif media_type == "SUBTITLES":
                 language = item.get("Language", "unknown")
                 name = item.get("Name", language)
                 segments_count = item.get("SegmentsCount", 0)
+                base_language, variant_from_code = StreamParser._extract_variant_from_language(language)
+                clean_name, variant_from_name = StreamParser._extract_variant_from_name(name)
+                final_variant = variant_from_code if variant_from_code else variant_from_name
                 
-                # Check if encrypted
                 is_encrypted = False
                 if "Playlist" in item and "MediaInit" in item["Playlist"]:
                     encrypt_info = item["Playlist"]["MediaInit"].get("EncryptInfo", {})
                     is_encrypted = encrypt_info.get("Method") is not None
                 
-                # Get duration
                 duration = "-"
                 if "Playlist" in item and "TotalDuration" in item["Playlist"]:
                     total_duration = item["Playlist"]["TotalDuration"]
@@ -156,9 +178,10 @@ class StreamParser:
                     resolution="-",
                     bitrate="-",
                     codec="-",
-                    language=language,
-                    lang_code=language,
-                    language_long=name,
+                    language=base_language,
+                    lang_code=base_language,
+                    language_long=clean_name,
+                    variant=final_variant,
                     encrypted=is_encrypted,
                     duration=duration,
                     segments_count=segments_count
@@ -170,13 +193,19 @@ class StreamParser:
     
     @staticmethod
     def _deduplicate_subtitles(streams: list) -> list:
-        """Remove duplicate subtitle streams based on language, lang_code, and language_long."""
+        """Remove duplicate subtitle streams"""
         seen_subtitles = {}
         result = []
         
         for stream in streams:
             if stream.type == "Subtitle":
-                key = (stream.language.lower(), stream.lang_code.lower(), stream.language_long.lower())
+                key = (
+                    stream.language.lower(),
+                    stream.lang_code.lower(),
+                    stream.language_long.lower(),
+                    stream.variant.lower()
+                )
+                
                 if key not in seen_subtitles:
                     seen_subtitles[key] = True
                     result.append(stream)

@@ -35,24 +35,25 @@ class FileUtils:
             ext = os.path.splitext(basename)[1].lower()
             name_no_ext = os.path.splitext(basename)[0]
             
-            # 1) Video
+            # Video
             if name_no_ext == clean_filename and ext in FileUtils.VIDEO_EXT and not result.video_path:
                 result.video_path = filepath
                 continue
             
-            # 2)Subtitle
+            # Subtitle
             if ext in FileUtils.SUBTITLE_EXT:
                 parts = basename.replace(clean_filename, '').lstrip('.').split('.')
                 lang = parts[0] if parts else "unknown"
                 result.subtitle_tracks.append(MediaTrack(path=filepath, language=lang, format=ext[1:]))
             
-            # 3) Audio
+            # Audio
             elif ext in FileUtils.AUDIO_EXT and name_no_ext != clean_filename:
                 parts = basename.replace(clean_filename, '').lstrip('.').split('.')
                 lang = parts[0] if parts and len(parts) >= 2 else (audio_lang or "unknown")
                 result.audio_tracks.append(MediaTrack(path=filepath, language=lang, format=ext[1:]))
         
         return result
+
 
 class FormatUtils:
     @staticmethod

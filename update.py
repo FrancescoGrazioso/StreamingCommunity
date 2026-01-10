@@ -15,7 +15,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.prompt import Prompt
 
-from StreamingCommunity.Upload.version import __author__, __title__
+from StreamingCommunity.upload.version import __author__, __title__
 
 
 # Variable
