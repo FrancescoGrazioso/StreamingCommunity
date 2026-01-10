@@ -126,29 +126,31 @@ class N_m3u8DLWrapper:
         
         if skip_download:
             command = [
-                self.config.n_m3u8dl_path, url, 
-                "--save-name", filename, 
-                "--save-dir", output_dir_abs, 
+                self.config.n_m3u8dl_path, url,
+                "--save-name", filename,
+                "--save-dir", output_dir_abs,
                 "--tmp-dir", output_dir_abs,
-                "--ffmpeg-binary-path", self.config.ffmpeg_path,
-                "--decryption-binary-path", self.config.mp4decrypt_path,
-                "--max-speed", str(self.config.max_speed),
-                "--skip-download", 
-                "--auto-select", 
+                "--http-request-timeout", str(self.config.req_timeout),
+                "--download-retry-count", str(self.config.retry_count),
+                "--skip-download",
+                "--auto-select",
                 "--write-meta-json"
             ]
         else:
             command = [
-                self.config.n_m3u8dl_path, url, 
-                "--save-name", filename, 
-                "--save-dir", output_dir_abs, 
-                "--tmp-dir", output_dir_abs, 
-                "--thread-count", str(self.config.thread_count), 
-                "--download-retry-count", str(self.config.retry_count),  
-                "--http-request-timeout", str(self.config.req_timeout),  
-                "--no-log",  
-                "--check-segments-count", str(CHECK_SEGMENTS_COUNT),  
-                "--binary-merge",  
+                self.config.n_m3u8dl_path, url,
+                "--save-name", filename,
+                "--save-dir", output_dir_abs,
+                "--tmp-dir", output_dir_abs,
+                "--thread-count", str(self.config.thread_count),
+                "--download-retry-count", str(self.config.retry_count),
+                "--http-request-timeout", str(self.config.req_timeout),
+                "--max-speed", str(self.config.max_speed),
+                "--ffmpeg-binary-path", self.config.ffmpeg_path,
+                "--decryption-binary-path", self.config.mp4decrypt_path,
+                "--no-log",
+                "--check-segments-count", str(CHECK_SEGMENTS_COUNT),
+                "--binary-merge",
                 "--del-after-done"
             ]
             

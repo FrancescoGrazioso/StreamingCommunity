@@ -11,6 +11,7 @@ from rich.console import Console
 
 
 # Internal utilities
+from StreamingCommunity.utils.http_client import get_headers
 from StreamingCommunity.core.processors import join_video, join_audios, join_subtitles
 from StreamingCommunity.utils import config_manager, os_manager, internet_manager
 
@@ -42,8 +43,10 @@ class HLS_Downloader:
         """
         self.m3u8_url = str(m3u8_url).strip()
         self.license_url = str(license_url).strip() if license_url else None
-        self.custom_headers = headers or {}
-        
+        self.custom_headers = headers
+        if self.custom_headers is None:
+            self.custom_headers = get_headers()
+
         # Sanitize and validate output path
         if not output_path:
             output_path = f"download.{EXTENSION_OUTPUT}"

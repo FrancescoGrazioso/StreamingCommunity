@@ -13,11 +13,11 @@
         "add_siteName": false
     },
     "M3U8_DOWNLOAD": {
-        "thread_count": 16,
-        "retry_count": 8,
+        "thread_count": 8,
+        "retry_count": 10,
         "concurrent_download": true,
         "max_speed": "30MB",
-        "check_segments_count": false,
+        "check_segments_count": true,
         "specific_list_audio": [
             "ita",
             "it-IT"
@@ -41,8 +41,8 @@
     },
     "REQUESTS": {
         "verify": false,
-        "timeout": 20,
-        "max_retry": 8
+        "timeout": 30,
+        "max_retry": 10
     },
     "HOOKS": {
         "pre_run": [],

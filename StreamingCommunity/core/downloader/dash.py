@@ -11,6 +11,7 @@ from rich.console import Console
 
 
 # Internal utilities
+from StreamingCommunity.utils.http_client import get_headers
 from StreamingCommunity.core.processors import join_video, join_audios, join_subtitles
 from StreamingCommunity.utils import config_manager, os_manager, internet_manager
 from StreamingCommunity.setup import get_wvd_path, get_prd_path
@@ -49,7 +50,9 @@ class DASH_Downloader:
         self.license_url = str(license_url).strip() if license_url else None
         self.mpd_url = str(mpd_url).strip()
         self.drm_preference = drm_preference.lower()
-        self.custom_headers = custom_headers or {}
+        self.custom_headers = custom_headers
+        if self.custom_headers is None:
+            self.custom_headers = get_headers()
         self.query_params = query_params or {}
         self.key = key
         self.license_headers = license_headers or {}
