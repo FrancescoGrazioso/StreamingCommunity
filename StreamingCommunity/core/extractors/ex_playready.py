@@ -39,7 +39,7 @@ def get_playready_keys(pssh: str, license_url: str, cdm_device_path: str, header
     session_id = cdm.open()
 
     try:
-        console.print(f"[cyan]PSSH ([yellow]PR[cyan]): [green]{pssh}")
+        console.print(f"[cyan]PSSH [yellow](PR)[white]: [green]{pssh}")
         
         try:
             pssh_obj = PSSH(pssh)

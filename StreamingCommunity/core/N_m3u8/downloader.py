@@ -105,12 +105,12 @@ class MediaDownloader:
             if stream.type == "Video":
                 will_download = (stream == selected_video)
             elif stream.type == "Audio":
-                will_download = "all" in [lang.lower() for lang in audio_langs] or any(
+                will_download = "all" in [lang.lower() for lang in audio_langs] or "*" in audio_langs or any(
                     lang.lower() == stream.language.lower() or lang.lower() == stream.lang_code.lower() 
                     for lang in audio_langs
                 )
             elif stream.type == "Subtitle":
-                will_download = "all" in [lang.lower() for lang in subtitle_langs] or any(
+                will_download = "all" in [lang.lower() for lang in subtitle_langs] or "*" in subtitle_langs or any(
                     lang.lower() == stream.language.lower() or lang.lower() == stream.lang_code.lower() 
                     for lang in subtitle_langs
                 )
@@ -226,10 +226,18 @@ class MediaDownloader:
                         if self.config.select_audio_lang and self.stream_info:
                             progress_manager.add_audio_task("", self.config.select_audio_lang, self.stream_info)
                     
-                    elif update.get("status") == "downloading" and progress_manager:
+                    elif update.get("status") == "downloading":
+                        if not progress_manager:
+                            protocol = self.stream_info.manifest_type if self.stream_info else "UNKNOWN"
+                            progress_manager = ProgressBarManager(protocol)
+                            progress_manager.setup()
+                            
+                            if self.config.select_audio_lang and self.stream_info:
+                                progress_manager.add_audio_task("", self.config.select_audio_lang, self.stream_info)
+                        
                         if "progress_video" in update:
                             self._current_video_progress = update["progress_video"]
-                            progress_manager.update_video_progress(update["progress_video"])
+                            progress_manager.update_video_progress(update["progress_video"], self.stream_info)
                         
                         if "progress_audio" in update:
                             self._current_audio_progress = update["progress_audio"]
@@ -295,9 +303,8 @@ class MediaDownloader:
                 available_subtitle_langs.add(stream.lang_code.lower())
         
         if stream_info.audio_streams:
-            if not audio_langs or "all" in audio_langs:
+            if not audio_langs or "all" in audio_langs or "*" in audio_langs:
                 self.config.select_audio_lang = list(available_audio_langs)
-                console.log(f"[yellow]Auto-selecting all audio languages: {', '.join(available_audio_langs)}")
             else:
                 matched_audio = [lang for lang in audio_langs if lang in available_audio_langs]
                 
@@ -310,9 +317,8 @@ class MediaDownloader:
                     self.config.select_audio_lang = matched_audio
         
         if stream_info.subtitle_streams:
-            if not subtitle_langs or "all" in subtitle_langs:
+            if not subtitle_langs or "all" in subtitle_langs or "*" in subtitle_langs:
                 self.config.select_subtitle_lang = list(available_subtitle_langs)
-                console.log(f"[yellow]Auto-selecting all subtitle languages: {', '.join(available_subtitle_langs)}")
             else:
                 matched_subtitles = [lang for lang in subtitle_langs if lang in available_subtitle_langs]
                 
@@ -354,50 +360,48 @@ class MediaDownloader:
             self.status_info.status = DownloadStatus.CANCELLED
             self._is_downloading = False
     
+    def _build_language_mapping(self) -> Dict[str, str]:
+        """Build mapping from original Language field (used in filenames) to display name."""
+        mapping = {}
+        
+        if not self.stream_info:
+            return mapping
+        
+        for stream in self.stream_info.streams:
+            if stream.type not in ["Audio", "Subtitle"]:
+                continue
+
+            # Use original_language (from meta.json) as key, since N_m3u8DL-RE uses it in filenames
+            original_lang = stream.original_language if stream.original_language else stream.language
+            lang_code_display = stream.lang_code if stream.lang_code != "-" else stream.language
+            lang_long = stream.language_long if stream.language_long != "-" else stream.language
+            
+            if stream.variant:
+                display_name = f"{lang_code_display} - {lang_long} - {stream.variant}"
+            else:
+                display_name = f"{lang_code_display} - {lang_long}"
+            
+            mapping[original_lang.lower()] = display_name
+        
+        return mapping
+    
     def _process_completed_download(self, result):
         """Process downloaded files and download external subtitles"""
         self.status_info.video_path = result.video_path
+        language_mapping = self._build_language_mapping()
         
-        lang_mapping = {}
-        
-        if self.stream_info:
-            for stream in self.stream_info.streams:
-                if stream.type in ["Audio", "Subtitle"]:
-                    lang_key = stream.language.lower() if stream.language != "-" else "unknown"
-                    variant_key = stream.variant.lower() if stream.variant else ""
-                    
-                    key = (lang_key, variant_key)
-                    if key not in lang_mapping:
-                        lang_code = stream.lang_code if stream.lang_code != "-" else stream.language
-                        lang_long = stream.language_long if stream.language_long != "-" else stream.language
-                        
-                        if stream.variant:
-                            display_name = f"{lang_code} - {lang_long} [{stream.variant}]"
-                        else:
-                            display_name = f"{lang_code} - {lang_long}"
-                        
-                        lang_mapping[key] = display_name
-        
+        # Process audio tracks
         self.status_info.audios_paths = []
         for track in result.audio_tracks:
-            base_lang = track.language
-            variant = ""
-            
-            if track.language.startswith("forced-"):
-                base_lang = track.language.replace("forced-", "")
-                variant = "forced"
-            elif track.language.startswith("sdh-"):
-                base_lang = track.language.replace("sdh-", "")
-                variant = "sdh"
-            
-            key = (base_lang.lower(), variant.lower())
-            display_name = lang_mapping.get(key, track.language)
+            lang_code = track.language.lower()
+            display_name = language_mapping.get(lang_code, track.language)
             
             self.status_info.audios_paths.append({
                 "path": track.path,
                 "language": display_name
             })
         
+        # Process subtitle tracks
         all_subtitles = list(result.subtitle_tracks)
         
         if self.external_subtitles and self.config.select_subtitle_lang:
@@ -413,25 +417,8 @@ class MediaDownloader:
         
         self.status_info.subtitle_paths = []
         for track in all_subtitles:
-            basename = os.path.basename(track.path)
-            name_parts = basename.replace(self.filename, '').lstrip('.').split('.')
-            
-            file_lang_code = name_parts[0] if name_parts else track.language
-            
-            base_lang = file_lang_code
-            variant = ""
-            
-            if file_lang_code.startswith("forced-"):
-                base_lang = file_lang_code.replace("forced-", "")
-                variant = "forced"
-            elif file_lang_code.startswith("sdh-"):
-                base_lang = file_lang_code.replace("sdh-", "")
-                variant = "sdh"
-            elif len(name_parts) >= 2 and name_parts[1].lower() == base_lang.lower():
-                variant = "cc"
-            
-            key = (base_lang.lower(), variant.lower())
-            display_name = lang_mapping.get(key, track.language)
+            lang_code = track.language.lower()
+            display_name = language_mapping.get(lang_code, track.language)
             
             self.status_info.subtitle_paths.append({
                 "path": track.path,
@@ -477,14 +464,14 @@ class MediaDownloader:
         if (self.status_info.is_completed and not self.status_info.video_path and not self.status_info.audios_paths):
             audio_lang_param = None
             if self.config.select_audio_lang:
-                if "all" in [lang.lower() for lang in self.config.select_audio_lang]:
+                if "all" in [lang.lower() for lang in self.config.select_audio_lang] or "*" in self.config.select_audio_lang:
                     audio_lang_param = None
                 else:
                     audio_lang_param = self.config.select_audio_lang[0] if isinstance(self.config.select_audio_lang, list) else self.config.select_audio_lang
             
             subtitle_lang_param = None
             if self.config.select_subtitle_lang:
-                if "all" in [lang.lower() for lang in self.config.select_subtitle_lang]:
+                if "all" in [lang.lower() for lang in self.config.select_subtitle_lang] or "*" in self.config.select_subtitle_lang:
                     subtitle_lang_param = None
                 else:
                     subtitle_lang_param = self.config.select_subtitle_lang[0] if isinstance(self.config.select_subtitle_lang, list) else self.config.select_subtitle_lang

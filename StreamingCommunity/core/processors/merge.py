@@ -234,16 +234,15 @@ def join_subtitles(video_path: str, subtitles_list: List[Dict[str, str]], out_pa
         disposition_idx = None
         for idx, subtitle in enumerate(subtitles_list):
             if subtitle.get('language', '').lower() == SUBTITLE_DISPOSITION_LANGUAGE.lower():
-                console.log(f"[yellow]    SET [cyan] disposition: [red]{SUBTITLE_DISPOSITION_LANGUAGE}")
+                console.print(f"[yellow]    Disposition [red]{SUBTITLE_DISPOSITION_LANGUAGE}")
                 disposition_idx = idx
                 break
         
         # If matching subtitle found, set disposition, otherwise use first subtitle
         if disposition_idx is not None:
-            console.log(f"[cyan]Setting subtitle disposition for language: [red]{SUBTITLE_DISPOSITION_LANGUAGE}")
             ffmpeg_cmd.extend([f'-disposition:s:{disposition_idx}', 'default+forced'])
         else:
-            console.log("[cyan]Using first subtitle for disposition.")
+            console.print("[red]Using first subtitle for disposition")
             ffmpeg_cmd.extend(['-disposition:s:0', 'default+forced'])
     
     # Overwrite

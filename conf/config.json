@@ -15,17 +15,15 @@
     "M3U8_DOWNLOAD": {
         "thread_count": 8,
         "retry_count": 10,
-        "concurrent_download": true,
+        "concurrent_download": false,
         "max_speed": "30MB",
         "check_segments_count": true,
         "specific_list_audio": [
-            "ita",
-            "it-IT"
+            "ita"
         ],
         "merge_subs": true,
         "specific_list_subtitles": [
-            "ita",
-            "it-IT"
+            "ita"
         ],
         "cleanup_tmp_folder": true
     },
@@ -34,7 +32,7 @@
         "param_video": ["-c:v", "libx265", "-crf", "28", "-preset", "medium"],
         "param_audio": ["-c:a", "libopus", "-b:a", "128k"],
         "subtitle_disposition": false,
-        "subtitle_disposition_language": "ita",
+        "subtitle_disposition_language": "ita - Italian - Forced",
         "param_final": ["-c", "copy"],
         "force_resolution": "Best",
         "extension": "mkv"

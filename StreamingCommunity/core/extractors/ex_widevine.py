@@ -40,7 +40,7 @@ def get_widevine_keys(pssh: str, license_url: str, cdm_device_path: str, headers
     session_id = cdm.open()
 
     try:
-        console.print(f"[cyan]PSSH ([yellow]WV[cyan]): [green]{pssh}")
+        console.print(f"[cyan]PSSH [yellow](WV)[white]: [green]{pssh}")
         challenge = cdm.get_license_challenge(session_id, PSSH(pssh))
         
         # With request license

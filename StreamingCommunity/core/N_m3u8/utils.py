@@ -1,6 +1,7 @@
 # 10.01.26
 
 import os
+import re
 
 # External library
 from rich.progress import ProgressColumn
@@ -15,6 +16,16 @@ class FileUtils:
     VIDEO_EXT = ['.mp4', '.mkv', '.ts', '.m4v', '.m4s']
     AUDIO_EXT = ['.m4a', '.aac', '.mp3', '.ts', '.m4s']
     SUBTITLE_EXT = ['.srt', '.vtt', '.ass', '.sub', '.idx']
+    
+    @staticmethod
+    def _extract_language_from_filename(filename: str) -> str:
+        """Extract the language code from filename (preserves variant info)."""
+        parts = filename.split('.')
+        if len(parts) < 2:
+            return "unknown"
+        
+        lang_part = parts[-2]
+        return lang_part
     
     @staticmethod
     def find_downloaded_files(output_dir: str, filename: str, audio_lang: str = None, subtitle_lang: str = None) -> DownloadResult:
@@ -40,17 +51,15 @@ class FileUtils:
                 result.video_path = filepath
                 continue
             
-            # Subtitle
+            # Subtitle - extract full language code (including variant)
             if ext in FileUtils.SUBTITLE_EXT:
-                parts = basename.replace(clean_filename, '').lstrip('.').split('.')
-                lang = parts[0] if parts else "unknown"
-                result.subtitle_tracks.append(MediaTrack(path=filepath, language=lang, format=ext[1:]))
+                lang_code = FileUtils._extract_language_from_filename(basename)
+                result.subtitle_tracks.append(MediaTrack(path=filepath, language=lang_code, format=ext[1:]))
             
             # Audio
             elif ext in FileUtils.AUDIO_EXT and name_no_ext != clean_filename:
-                parts = basename.replace(clean_filename, '').lstrip('.').split('.')
-                lang = parts[0] if parts and len(parts) >= 2 else (audio_lang or "unknown")
-                result.audio_tracks.append(MediaTrack(path=filepath, language=lang, format=ext[1:]))
+                lang_code = FileUtils._extract_language_from_filename(basename)
+                result.audio_tracks.append(MediaTrack(path=filepath, language=lang_code, format=ext[1:]))
         
         return result
 

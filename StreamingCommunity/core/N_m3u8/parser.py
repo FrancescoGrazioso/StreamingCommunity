@@ -24,7 +24,12 @@ class StreamParser:
     
     @staticmethod
     def _extract_variant_from_language(language_code: str) -> Tuple[str, str]:
-        """Extract base language and variant from language code."""
+        """Extract base language and variant from language code.
+        Examples:
+        - 'ita-forced' -> ('ita', 'Forced')
+        - 'eng' -> ('eng', '')
+        - 'forced-ita' -> ('ita', 'Forced')
+        """
         if language_code.startswith("forced-"):
             return language_code.replace("forced-", ""), "Forced"
         elif language_code.startswith("sdh-"):
@@ -37,7 +42,12 @@ class StreamParser:
     
     @staticmethod
     def _extract_variant_from_name(name: str) -> Tuple[str, str]:
-        """Extract clean name and variant from name field."""
+        """Extract clean name and variant from name field.
+        Examples:
+        - 'Italian [CC]' -> ('Italian', 'CC')
+        - 'English [Forced]' -> ('English', 'Forced')
+        - 'German' -> ('German', '')
+        """
         # Check for square brackets variants [CC], [Forced], [SDH], etc.
         match_square = re.match(r'^(.+?)\s*\[(.+?)\]\s*$', name)
         if match_square:
@@ -65,7 +75,12 @@ class StreamParser:
                 meta_data = json.load(f)
         except Exception as e:
             print(f"Error reading meta.json: {e}")
-            return StreamInfo("UNKNOWN", [])
+            try:
+                with open(meta_file_path, 'r', encoding='latin-1') as f:
+                    meta_data = json.load(f)
+            except Exception as e2:
+                print(f"Errore con encoding latin-1: {e2}")
+                return StreamInfo("UNKNOWN", [])
         
         streams = []
         manifest_type = manifest_type_hint if manifest_type_hint else "UNKNOWN"
@@ -148,7 +163,8 @@ class StreamParser:
                     variant=final_variant,
                     encrypted=is_encrypted,
                     duration=duration,
-                    segments_count=segments_count
+                    segments_count=segments_count,
+                    original_language=language
                 )
                 streams.append(stream)
             
@@ -159,7 +175,7 @@ class StreamParser:
                 segments_count = item.get("SegmentsCount", 0)
                 base_language, variant_from_code = StreamParser._extract_variant_from_language(language)
                 clean_name, variant_from_name = StreamParser._extract_variant_from_name(name)
-                final_variant = variant_from_code if variant_from_code else variant_from_name
+                final_variant = variant_from_name if variant_from_name else variant_from_code
                 
                 is_encrypted = False
                 if "Playlist" in item and "MediaInit" in item["Playlist"]:
@@ -184,35 +200,12 @@ class StreamParser:
                     variant=final_variant,
                     encrypted=is_encrypted,
                     duration=duration,
-                    segments_count=segments_count
+                    segments_count=segments_count,
+                    original_language=language
                 )
                 streams.append(stream)
         
-        streams = StreamParser._deduplicate_subtitles(streams)
         return StreamInfo(manifest_type, streams)
-    
-    @staticmethod
-    def _deduplicate_subtitles(streams: list) -> list:
-        """Remove duplicate subtitle streams"""
-        seen_subtitles = {}
-        result = []
-        
-        for stream in streams:
-            if stream.type == "Subtitle":
-                key = (
-                    stream.language.lower(),
-                    stream.lang_code.lower(),
-                    stream.language_long.lower(),
-                    stream.variant.lower()
-                )
-                
-                if key not in seen_subtitles:
-                    seen_subtitles[key] = True
-                    result.append(stream)
-            else:
-                result.append(stream)
-        
-        return result
     
     @staticmethod
     def parse_progress(line: str) -> Optional[DownloadProgress]:

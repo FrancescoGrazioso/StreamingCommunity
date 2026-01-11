@@ -57,8 +57,11 @@ def title_search(query: str) -> int:
 
     # Process items
     for item in items:
-        is_series = (item.get("__typename") == "SeriesItem" or item.get("cardLink", {}).get("referenceType") == "series"or bool(item.get("seasons")))
-        item_type = "tv" if is_series else "film"
+        try:
+            is_series = (item.get("__typename") == "SeriesItem" or item.get("cardLink", {}).get("referenceType") == "series"or bool(item.get("seasons")))
+            item_type = "tv" if is_series else "film"
+        except:
+            break
 
         # Get date
         date = item.get("year") or ''

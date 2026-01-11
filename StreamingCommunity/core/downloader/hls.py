@@ -89,14 +89,14 @@ class HLS_Downloader:
         # Create output directory
         os_manager.create_path(self.output_dir)
         
-        console.print("[green]Call [purple]get_streams_json() [cyan]to retrieve stream information ...")
+        console.print("[green]Call [purple]get_streams_json() [cyan]...")
         stream_info = self.media_downloader.get_available_streams()
         
         if stream_info:
             console.print(f"[cyan]Manifest [yellow]{stream_info.manifest_type} [green]Video streams[white]: [red]{len(stream_info.video_streams)}[white], [green]Audio streams[white]: [red]{len(stream_info.audio_streams)}[white], [green]Subtitle streams[white]: [red]{len(stream_info.subtitle_streams)}")
             self.media_downloader.show_table()
         
-        console.print("\n[green]Call [purple]start_download() [cyan]to begin downloading ...")
+        console.print("\n[green]Call [purple]start_download() [cyan]...")
         for update in self.media_downloader.start_download(show_progress=True):
             pass  # Progress is shown automatically
 

@@ -369,11 +369,8 @@ class ConfigManager:
     
     def _save_domains_to_appropriate_location(self) -> None:
         """Save domains to the conf directory."""
-        target_path = self.domains_path
-        console.print(f"\n[cyan]Domain path: [green]{target_path}")
-
         try:
-            with open(target_path, 'w', encoding='utf-8') as f:
+            with open(self.domains_path, 'w', encoding='utf-8') as f:
                 json.dump(self._domains_data, f, indent=4, ensure_ascii=False)
         except Exception as save_error:
             console.print(f"[red]Could not save domains to file: {str(save_error)}")

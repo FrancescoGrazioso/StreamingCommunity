@@ -120,6 +120,19 @@ class N_m3u8DLWrapper:
         
         return result if result else base_langs
     
+    def _normalize_lang_selection(self, lang_param: Optional[List[str] | str]) -> Optional[List[str]]:
+        """Normalize language selection parameter"""
+        if not lang_param:
+            return None
+        
+        if isinstance(lang_param, str):
+            lang_param = [lang_param]
+        
+        if len(lang_param) == 1 and lang_param[0].lower() in ["*", "all"]:
+            return ["all"]
+        
+        return lang_param
+    
     def _build_command(self, url: str, filename: str, headers: Optional[Dict[str, str]] = None, decryption_keys: Optional[List[str]] = None, skip_download: bool = False, stream_info: Optional[StreamInfo] = None) -> List[str]:
         """Build N_m3u8DL-RE command"""
         output_dir_abs = str(os.path.abspath(self.output_dir))
@@ -171,11 +184,11 @@ class N_m3u8DLWrapper:
             else:
                 command.extend(["--select-video", "best"])
             
-            # Select audio
-            if self.config.select_audio_lang:
-                audio_langs = self.config.select_audio_lang if isinstance(self.config.select_audio_lang, list) else [self.config.select_audio_lang]
-                
-                if len(audio_langs) == 1 and audio_langs[0].lower() == "all":
+            # Select audio - normalize lang selection
+            audio_langs = self._normalize_lang_selection(self.config.select_audio_lang)
+            
+            if audio_langs:
+                if audio_langs == ["all"]:
                     command.extend(["--select-audio", "all"])
                 else:
                     original_audio_codes = self._get_original_lang_codes(stream_info, audio_langs, "Audio") if stream_info else audio_langs
@@ -188,11 +201,11 @@ class N_m3u8DLWrapper:
             else:
                 command.append("--drop-audio")
             
-            # Select subtitles
-            if self.config.select_subtitle_lang:
-                subtitle_langs = self.config.select_subtitle_lang if isinstance(self.config.select_subtitle_lang, list) else [self.config.select_subtitle_lang]
-                
-                if len(subtitle_langs) == 1 and subtitle_langs[0].lower() == "all":
+            # Select subtitles - normalize lang selection
+            subtitle_langs = self._normalize_lang_selection(self.config.select_subtitle_lang)
+            
+            if subtitle_langs:
+                if subtitle_langs == ["all"]:
                     command.extend(["--select-subtitle", "all"])
                 else:
                     original_subtitle_codes = self._get_original_lang_codes(stream_info, subtitle_langs, "Subtitle") if stream_info else subtitle_langs
@@ -382,6 +395,8 @@ class N_m3u8DLWrapper:
                         update["progress_video"] = progress
                     elif progress.stream_type == "Aud":
                         update["progress_audio"] = progress
+                    elif progress.stream_type == "Sub":
+                        update["progress_subtitle"] = progress
                     yield update
             
             process.wait()

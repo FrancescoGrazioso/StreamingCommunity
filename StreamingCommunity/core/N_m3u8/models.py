@@ -32,6 +32,7 @@ class Stream:
     encrypted: bool = False
     duration: str = "-"
     segments_count: int = 0
+    original_language: str = ""
 
 
 @dataclass
