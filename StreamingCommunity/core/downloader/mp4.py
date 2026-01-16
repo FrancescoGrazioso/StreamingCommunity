@@ -116,7 +116,7 @@ def MP4_Downloader(url: str, path: str, referer: str = None, headers_: dict = No
 
             # Create progress bar with Rich
             progress_bars = Progress(
-                TextColumn("[bold yellow]MP4[/bold yellow] [bold cyan]Downloading[/bold cyan]: "),
+                TextColumn("[yellow]MP4[/yellow] [cyan]Downloading[/cyan]: "),
                 CustomBarColumn(),
                 TextColumn("[bright_green]{task.fields[downloaded]}[/bright_green] [bright_magenta]{task.fields[downloaded_unit]}[/bright_magenta][dim]/[/dim][bright_cyan]{task.fields[total_size]}[/bright_cyan] [bright_magenta]{task.fields[total_unit]}[/bright_magenta]"),
                 TextColumn("[dim]\\[[/dim][bright_yellow]{task.fields[elapsed]}[/bright_yellow][dim] < [/dim][bright_cyan]{task.fields[eta]}[/bright_cyan][dim]][/dim]"),

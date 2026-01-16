@@ -151,7 +151,7 @@ def print_commit_info(commit_info: dict):
     """
 
     # Create a table for commit information
-    table = Table(title=f"[bold green]Latest Commit Information - {__title__}", show_header=False)
+    table = Table(title=f"[green]Latest Commit Information - {__title__}", show_header=False)
     table.add_column("Field", style="cyan")
     table.add_column("Value", style="yellow")
 
@@ -261,7 +261,7 @@ def main_upload(auto_confirm=None, dry_run=False):
     items_to_delete = dry_run_deletion(".", "Video", "upload.py")
     
     if items_to_delete:
-        console.print("\n[bold yellow]Files and folders that will be deleted:")
+        console.print("\n[yellow]Files and folders that will be deleted:")
         for item_name, item_type, item_path in items_to_delete:
             console.print(f"  [red]• {item_type}: {item_name}")
         console.print()
@@ -269,7 +269,7 @@ def main_upload(auto_confirm=None, dry_run=False):
     # First confirmation: Basic yes/no
     if auto_confirm is None:
         cmd_insert = Prompt.ask(
-            "[bold red]Are you sure you want to delete all files except 'Video' folder and 'upload.py'?",
+            "[red]Are you sure you want to delete all files except 'Video' folder and 'upload.py'?",
             choices=['y', 'n'],
             default='n',
             show_choices=True
@@ -283,10 +283,10 @@ def main_upload(auto_confirm=None, dry_run=False):
         return
 
     # Second confirmation: Require explicit phrase
-    console.print("\n[bold red]WARNING: This action cannot be undone!")
+    console.print("\n[red]WARNING: This action cannot be undone!")
     confirmation_phrase = "DELETE MY FILES"
     user_input = Prompt.ask(
-        f"[bold red]Type '{confirmation_phrase}' to confirm deletion",
+        f"[red]Type '{confirmation_phrase}' to confirm deletion",
         default=""
     )
     
@@ -296,7 +296,7 @@ def main_upload(auto_confirm=None, dry_run=False):
     
     # Perform dry run first
     if dry_run:
-        console.print("\n[bold cyan]DRY RUN MODE - No files will be deleted")
+        console.print("\n[cyan]DRY RUN MODE - No files will be deleted")
         keep_specific_items(".", "Video", "upload.py", dry_run=True)
         return
     
