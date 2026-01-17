@@ -1,5 +1,6 @@
 # 29.12.25
 
+import time
 import base64
 from urllib.parse import urlencode
 
@@ -16,12 +17,12 @@ from pywidevine.pssh import PSSH
 console = Console()
 
 
-def get_widevine_keys(pssh: str, license_url: str, cdm_device_path: str, headers: dict = None, query_params: dict =None, key: str=None):
+def get_widevine_keys(pssh_list: list[dict], license_url: str, cdm_device_path: str, headers: dict = None, query_params: dict = None, key: str = None):
     """
     Extract Widevine CONTENT keys (KID/KEY) from a license using pywidevine.
 
     Args:
-        - pssh (str): PSSH base64.
+        - pssh_list (list[dict]): List of dicts {'pssh': ..., 'kid': ..., 'type': ...}
         - license_url (str): Widevine license URL.
         - cdm_device_path (str): Path to CDM file (device.wvd).
         - headers (dict): Optional HTTP headers for the license request (from fetch).
@@ -29,23 +30,38 @@ def get_widevine_keys(pssh: str, license_url: str, cdm_device_path: str, headers
         - key (str): Optional raw license data to bypass HTTP request.
 
     Returns:
-        list: List of dicts {'kid': ..., 'key': ...} (only CONTENT keys) or None if error.
+        list: List of strings "KID:KEY" (only CONTENT keys) or None if error.
     """
     if cdm_device_path is None:
         console.print("[red]Device cdm path is None.")
+        return None
+    
+    if key:
+        k_split = key.split(':')
+        if len(k_split) == 2:
+            return [f"{k_split[0].replace('-', '').strip()}:{k_split[1].replace('-', '').strip()}"]
         return None
 
     device = Device.load(cdm_device_path)
     cdm = Cdm.from_device(device)
     session_id = cdm.open()
+    
+    all_content_keys = []
 
     try:
-        console.print(f"[cyan]PSSH [yellow](WV)[white]: [green]{pssh}")
-        challenge = cdm.get_license_challenge(session_id, PSSH(pssh))
-        
-        # With request license
-        if key is None:
-
+        for i, item in enumerate(pssh_list):
+            pssh = item['pssh']
+            kid_info = item.get('kid', 'N/A')
+            type_info = item.get('type', 'unknown')
+            
+            console.print(f" [yellow]{i}) [cyan]PSSH [yellow](WV) [cyan]for Kid: [red]{kid_info} [cyan]Type: [red]{type_info}")
+            
+            try:
+                challenge = cdm.get_license_challenge(session_id, PSSH(pssh))
+            except Exception as e:
+                console.print(f"[red]Error creating challenge for PSSH {pssh}: {e}")
+                continue
+            
             # Build request URL with query params
             request_url = license_url
             if query_params:
@@ -53,22 +69,19 @@ def get_widevine_keys(pssh: str, license_url: str, cdm_device_path: str, headers
 
             # Prepare headers (use original headers from fetch)
             req_headers = headers.copy() if headers else {}
-            request_kwargs = {}
-            request_kwargs['data'] = challenge
-
-            # Keep original Content-Type or default to octet-stream
             if 'Content-Type' not in req_headers:
                 req_headers['Content-Type'] = 'application/octet-stream'
 
             if license_url is None:
                 console.print("[red]License URL is None.")
-                return None
+                continue
 
-            response = requests.post(request_url, headers=req_headers, impersonate="chrome124", **request_kwargs)
+            response = requests.post(request_url, headers=req_headers, data=challenge, impersonate="chrome142")
+            time.sleep(0.25)
 
             if response.status_code != 200:
                 console.print(f"[red]License error: {response.status_code}, {response.text}")
-                return None
+                continue
 
             # Parse license response
             license_bytes = response.content
@@ -82,39 +95,36 @@ def get_widevine_keys(pssh: str, license_url: str, cdm_device_path: str, headers
                         license_bytes = base64.b64decode(data["license"])
                     else:
                         console.print(f"[red]'license' field not found in JSON response: {data}.")
-                        return None
+                        continue
                 except Exception as e:
                     console.print(f"[red]Error parsing JSON license: {e}")
-                    return None
+                    continue
 
             if not license_bytes:
                 console.print("[red]License data is empty.")
-                return None
+                continue
 
             # Parse license
             try:
                 cdm.parse_license(session_id, license_bytes)
             except Exception as e:
                 console.print(f"[red]Error parsing license: {e}")
-                return None
+                continue
 
             # Extract CONTENT keys
-            content_keys = []
-            for key in cdm.get_keys(session_id):
-                if key.type == "CONTENT":
-                    kid = key.kid.hex
-                    key_val = key.key.hex()
-                    content_keys.append(f"{kid.replace('-', '').strip()}:{key_val.replace('-', '').strip()}")
+            for key_obj in cdm.get_keys(session_id):
+                kid = key_obj.kid.hex
+                if all(c == '0' for c in kid):
+                    continue
+                formatted_key = f"{kid}:{key_obj.key.hex()}"
+                if formatted_key not in all_content_keys:
+                    all_content_keys.append(formatted_key)
 
-            # Return keys
-            for i, key in enumerate(content_keys):
-                console.print(f"    [yellow]{i}) [cyan]Extracted kid: [red]{key.split(':')[0]} [cyan]| key: [green]{key.split(':')[1]}")
-            return content_keys
-
-        else:
-            content_keys = []
-            content_keys.append(f"{key.split(':')[0].replace('-', '').strip()}:{key.split(':')[1].replace('-', '').strip()}")
-            return content_keys
+        # Return keys
+        for i, k in enumerate(all_content_keys):
+            console.print(f"    [yellow]{i}) [cyan]Extracted kid: [red]{k.split(':')[0]} [cyan]| key: [green]{k.split(':')[1]}")
+        
+        return all_content_keys if all_content_keys else None
     
     finally:
         cdm.close(session_id)

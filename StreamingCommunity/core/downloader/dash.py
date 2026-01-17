@@ -98,18 +98,17 @@ class DASH_Downloader:
     
     def _fetch_decryption_keys(self) -> bool:
         """Fetch decryption keys based on DRM type"""
-        if not self.license_url or not self.drm_info or not self.drm_info['pssh']:
+        if not self.license_url or not self.drm_info:
             console.print("[yellow]No DRM protection or missing license info")
             return True
         
         drm_type = self.drm_info['selected_drm_type']
-        pssh = self.drm_info['pssh']
         
         try:
             time.sleep(0.25)
             if drm_type == DRMSystem.WIDEVINE:
                 keys = get_widevine_keys(
-                    pssh=pssh,
+                    pssh_list=self.drm_info.get('widevine_pssh', []),
                     license_url=self.license_url,
                     cdm_device_path=get_wvd_path(),
                     headers=self.license_headers,
@@ -119,7 +118,7 @@ class DASH_Downloader:
 
             elif drm_type == DRMSystem.PLAYREADY:
                 keys = get_playready_keys(
-                    pssh=pssh,
+                    pssh_list=self.drm_info.get('playready_pssh', []),
                     license_url=self.license_url,
                     cdm_device_path=get_prd_path(),
                     headers=self.license_headers,
