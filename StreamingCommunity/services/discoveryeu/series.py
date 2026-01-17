@@ -64,7 +64,7 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
     playback_info = get_playback_info(obj_episode.video_id)
 
     if (str(playback_info['type']).strip().lower() == 'dash' and playback_info['license_url'] is None) or (str(playback_info['type']).strip().lower() != 'hls' and str(playback_info['type']).strip().lower() != 'dash' ):
-        console.print(f"[red]Unsupported streaming type. Playbackk info: {playback_info}")
+        console.print(f"[red]Unsupported streaming type. Playback info: {playback_info}")
         return None, False
     
     # Check the type of stream

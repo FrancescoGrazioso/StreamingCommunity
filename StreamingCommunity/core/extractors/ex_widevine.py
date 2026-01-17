@@ -2,7 +2,6 @@
 
 import time
 import base64
-from urllib.parse import urlencode
 
 
 # External libraries
@@ -17,7 +16,7 @@ from pywidevine.pssh import PSSH
 console = Console()
 
 
-def get_widevine_keys(pssh_list: list[dict], license_url: str, cdm_device_path: str, headers: dict = None, query_params: dict = None, key: str = None):
+def get_widevine_keys(pssh_list: list[dict], license_url: str, cdm_device_path: str, headers: dict = None, key: str = None):
     """
     Extract Widevine CONTENT keys (KID/KEY) from a license using pywidevine.
 
@@ -26,7 +25,6 @@ def get_widevine_keys(pssh_list: list[dict], license_url: str, cdm_device_path: 
         - license_url (str): Widevine license URL.
         - cdm_device_path (str): Path to CDM file (device.wvd).
         - headers (dict): Optional HTTP headers for the license request (from fetch).
-        - query_params (dict): Optional query parameters to append to the URL.
         - key (str): Optional raw license data to bypass HTTP request.
 
     Returns:
@@ -62,11 +60,6 @@ def get_widevine_keys(pssh_list: list[dict], license_url: str, cdm_device_path: 
                 console.print(f"[red]Error creating challenge for PSSH {pssh}: {e}")
                 continue
             
-            # Build request URL with query params
-            request_url = license_url
-            if query_params:
-                request_url = f"{license_url}?{urlencode(query_params)}"
-
             # Prepare headers (use original headers from fetch)
             req_headers = headers.copy() if headers else {}
             if 'Content-Type' not in req_headers:
@@ -76,7 +69,7 @@ def get_widevine_keys(pssh_list: list[dict], license_url: str, cdm_device_path: 
                 console.print("[red]License URL is None.")
                 continue
 
-            response = requests.post(request_url, headers=req_headers, data=challenge, impersonate="chrome142")
+            response = requests.post(license_url, headers=req_headers, data=challenge, impersonate="chrome142")
             time.sleep(0.25)
 
             if response.status_code != 200:
@@ -120,6 +113,10 @@ def get_widevine_keys(pssh_list: list[dict], license_url: str, cdm_device_path: 
                 formatted_key = f"{kid}:{key_obj.key.hex()}"
                 if formatted_key not in all_content_keys:
                     all_content_keys.append(formatted_key)
+
+            # Break if 'all' type requested or single PSSH with keys extracted
+            if (type_info.lower() == 'all' and len(all_content_keys) >= 1) or (len(pssh_list) == 1 and len(all_content_keys) >= 1):
+                break
 
         # Return keys
         for i, k in enumerate(all_content_keys):

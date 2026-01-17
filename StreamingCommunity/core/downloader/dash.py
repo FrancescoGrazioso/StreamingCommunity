@@ -31,7 +31,7 @@ EXTENSION_OUTPUT = config_manager.config.get("M3U8_CONVERSION", "extension")
 
 
 class DASH_Downloader:
-    def __init__(self, license_url: str, license_headers: Dict[str, str] = None, mpd_url: str = None, mpd_headers: Dict[str, str] = None, mpd_sub_list: list = None, output_path: str = None, drm_preference: str = 'widevine', decrypt_preference : str = "shaka", query_params: Dict[str, str] = None, key: str = None, cookies: Dict[str, str] = None):
+    def __init__(self, license_url: str, license_headers: Dict[str, str] = None, mpd_url: str = None, mpd_headers: Dict[str, str] = None, mpd_sub_list: list = None, output_path: str = None, drm_preference: str = 'widevine', decrypt_preference : str = "shaka", key: str = None, cookies: Dict[str, str] = None):
         """
         Initialize DASH Downloader.
         
@@ -46,7 +46,6 @@ class DASH_Downloader:
         self.license_url = str(license_url).strip() if license_url else None
         self.mpd_headers = mpd_headers
         self.license_headers = license_headers
-        self.query_params = query_params or {}
         self.mpd_sub_list = mpd_sub_list or []
         self.drm_preference = drm_preference.lower()
         self.key = key
@@ -112,7 +111,6 @@ class DASH_Downloader:
                     license_url=self.license_url,
                     cdm_device_path=get_wvd_path(),
                     headers=self.license_headers,
-                    query_params=self.query_params,
                     key=self.key
                 )
 
@@ -122,7 +120,6 @@ class DASH_Downloader:
                     license_url=self.license_url,
                     cdm_device_path=get_prd_path(),
                     headers=self.license_headers,
-                    query_params=self.query_params,
                     key=self.key
                 )
 
