@@ -100,6 +100,7 @@ def get_playready_keys(pssh_list: list[dict], license_url: str, cdm_device_path:
                 kid = key_obj.key_id.hex.replace('-', '').strip()
                 if all(c == '0' for c in kid):
                     continue
+                
                 key_val = key_obj.key.hex().replace('-', '').strip()
                 formatted_key = f"{kid}:{key_val}"
                 if formatted_key not in all_content_keys:

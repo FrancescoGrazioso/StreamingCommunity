@@ -1,6 +1,8 @@
 # 10.01.26
 
 import xml.etree.ElementTree as ET
+import base64
+import binascii
 from typing import Optional, List, Dict
 
 
@@ -128,14 +130,47 @@ class ContentProtectionHandler:
     def _has_pssh_data(self, cp_element: ET.Element, drm_type: str) -> bool:
         pssh = self.ns.find(cp_element, 'cenc:pssh')
         if pssh is not None and pssh.text and pssh.text.strip():
-            return True
+            if self._is_valid_pssh(pssh.text.strip(), drm_type):
+                return True
         
         if drm_type == DRMSystem.PLAYREADY:
             pro = self.ns.find(cp_element, 'mspr:pro')
-            return pro is not None and bool((pro.text or '').strip())
+            if pro is not None and pro.text and pro.text.strip():
+                if self._is_valid_pro(pro.text.strip()):
+                    return True
         
         return False
     
+    def _is_valid_pssh(self, pssh_b64: str, drm_type: str) -> bool:
+        """Verify if the PSSH is valid for the given DRM type"""
+        try:
+            data = base64.b64decode(pssh_b64)
+            if len(data) < 32:
+                return False
+            if data[4:8] != b'pssh': 
+                return False
+            
+            target_uuid = DRMSystem.get_uuid(drm_type)
+            if not target_uuid: 
+                return False
+            
+            target_bytes = binascii.unhexlify(target_uuid.replace('-', ''))
+            return data[12:28] == target_bytes
+        except Exception:
+            return False
+
+    def _is_valid_pro(self, pro_b64: str) -> bool:
+        """Verify if the PlayReady Object is valid"""
+        try:
+            data = base64.b64decode(pro_b64)
+            if len(data) < 10: 
+                return False
+            
+            length = int.from_bytes(data[:4], byteorder='little')
+            return len(data) == length
+        except Exception:
+            return False
+
     def extract_pssh(self, root: ET.Element, drm_type: str = DRMSystem.WIDEVINE) -> List[str]:
         target_uuid = DRMSystem.get_uuid(drm_type)
         if not target_uuid:
@@ -151,9 +186,14 @@ class ContentProtectionHandler:
                         if not text:
                             continue
 
-                        if 'pssh' in child.tag or (drm_type == DRMSystem.PLAYREADY and 'pro' in child.tag):
-                            if text not in pssh_list:
-                                pssh_list.append(text)
+                        if 'pssh' in child.tag:
+                            if self._is_valid_pssh(text, drm_type):
+                                if text not in pssh_list:
+                                    pssh_list.append(text)
+                        elif drm_type == DRMSystem.PLAYREADY and 'pro' in child.tag:
+                            if self._is_valid_pro(text):
+                                if text not in pssh_list:
+                                    pssh_list.append(text)
         
         return pssh_list
 
@@ -169,8 +209,10 @@ class ContentProtectionHandler:
         for period in self.ns.findall(root, 'mpd:Period'):
             for adapt_set in self.ns.findall(period, 'mpd:AdaptationSet'):
                 content_type = adapt_set.get('contentType') or adapt_set.get('mimeType', 'unknown')
-                if 'video' in content_type.lower(): content_type = 'video'
-                elif 'audio' in content_type.lower(): content_type = 'audio'
+                if 'video' in content_type.lower(): 
+                    content_type = 'video'
+                elif 'audio' in content_type.lower():
+                    content_type = 'audio'
                 
                 default_kid = self.get_default_kid(adapt_set)
                 
@@ -180,8 +222,16 @@ class ContentProtectionHandler:
                     if target_uuid in scheme_id:
                         for child in cp:
                             text = (child.text or "").strip()
-                            if not text: continue
-                            if 'pssh' in child.tag or (drm_type == DRMSystem.PLAYREADY and 'pro' in child.tag):
+                            if not text: 
+                                continue
+
+                            is_valid = False
+                            if 'pssh' in child.tag:
+                                is_valid = self._is_valid_pssh(text, drm_type)
+                            elif drm_type == DRMSystem.PLAYREADY and 'pro' in child.tag:
+                                is_valid = self._is_valid_pro(text)
+
+                            if is_valid:
                                 if text not in observed:
                                     observed.add(text)
                                     pssh_list.append({'pssh': text, 'kid': default_kid or 'N/A', 'type': content_type})
@@ -193,8 +243,16 @@ class ContentProtectionHandler:
                          if target_uuid in scheme_id:
                              for child in cp:
                                 text = (child.text or "").strip()
-                                if not text: continue
-                                if 'pssh' in child.tag or (drm_type == DRMSystem.PLAYREADY and 'pro' in child.tag):
+                                if not text: 
+                                    continue
+
+                                is_valid = False
+                                if 'pssh' in child.tag:
+                                    is_valid = self._is_valid_pssh(text, drm_type)
+                                elif drm_type == DRMSystem.PLAYREADY and 'pro' in child.tag:
+                                    is_valid = self._is_valid_pro(text)
+
+                                if is_valid:
                                     if text not in observed:
                                         observed.add(text)
                                         pssh_list.append({'pssh': text, 'kid': default_kid or 'N/A', 'type': content_type})
@@ -207,8 +265,16 @@ class ContentProtectionHandler:
                     if target_uuid in scheme_id:
                         for child in elem:
                             text = (child.text or "").strip()
-                            if not text: continue
-                            if 'pssh' in child.tag or (drm_type == DRMSystem.PLAYREADY and 'pro' in child.tag):
+                            if not text: 
+                                continue
+
+                            is_valid = False
+                            if 'pssh' in child.tag:
+                                is_valid = self._is_valid_pssh(text, drm_type)
+                            elif drm_type == DRMSystem.PLAYREADY and 'pro' in child.tag:
+                                is_valid = self._is_valid_pro(text)
+
+                            if is_valid:
                                 if text not in observed:
                                     observed.add(text)
                                     pssh_list.append({'pssh': text, 'kid': 'N/A', 'type': 'global'})
@@ -279,7 +345,8 @@ class MPDParser:
     def print_adaptation_sets_info(self):
         """Print AdaptationSets information in a simplified format"""
         sets = [s for s in self.get_adaptation_sets_info() if s['content_type'] not in ('image', 'text')]
-        if not sets: return
+        if not sets: 
+            return
 
         groups = {}
         for s in sets:

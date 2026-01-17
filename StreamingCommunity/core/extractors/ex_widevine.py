@@ -116,6 +116,7 @@ def get_widevine_keys(pssh_list: list[dict], license_url: str, cdm_device_path: 
                 kid = key_obj.kid.hex
                 if all(c == '0' for c in kid):
                     continue
+                
                 formatted_key = f"{kid}:{key_obj.key.hex()}"
                 if formatted_key not in all_content_keys:
                     all_content_keys.append(formatted_key)
