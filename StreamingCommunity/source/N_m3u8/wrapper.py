@@ -15,7 +15,7 @@ from rich.console import Console
 from rich.progress import Progress, TextColumn
 
 
-# Interl 
+# Internal 
 from StreamingCommunity.utils.config import config_manager
 from StreamingCommunity.utils import internet_manager
 from StreamingCommunity.setup import get_ffmpeg_path, get_n_m3u8dl_re_path, get_bento4_decrypt_path, get_shaka_packager_path
@@ -64,6 +64,24 @@ class MediaDownloader:
         self.manifest_type = "Unknown"
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
+    def _normalize_filter(self, filter_value: str) -> str:
+        """Normalize filter removing outer quotes if present"""
+        if not filter_value:
+            return filter_value
+        
+        # Pattern: key='value' or key="value"
+        pattern = r"([a-zA-Z_-]+)='([^']+)'"
+        
+        def replacer(match):
+            key, value = match.groups()
+
+            # If contains special characters, keep quotes
+            if any(c in value for c in '|.*+?[]{}()^$'):
+                return f'{key}="{value}"'
+            return f'{key}={value}'
+        
+        return re.sub(pattern, replacer, filter_value)
+
     def _get_common_args(self) -> List[str]:
         """Get common command line arguments for N_m3u8DL-RE"""
         cmd = []
@@ -78,10 +96,7 @@ class MediaDownloader:
         if USE_PROXY and (proxy_url := CONF_PROXY.get("https") or CONF_PROXY.get("http")):
             cmd.extend(["--use-system-proxy", "false", "--custom-proxy", proxy_url])
 
-        # Always use these to ensure consistent output format for parsing, 
-        # and to avoid ANSI-related issues on some Windows terminals.
         cmd.extend(["--force-ansi-console", "--no-ansi-color"])
-
         return cmd
     
     def determine_decryption_tool(self) -> str:
@@ -99,6 +114,11 @@ class MediaDownloader:
         analysis_path = self.output_dir / "analysis_temp"
         analysis_path.mkdir(exist_ok=True)
         
+        # Normalize filter values
+        normalized_video = self._normalize_filter(video_filter)
+        normalized_audio = self._normalize_filter(audio_filter)
+        normalized_subtitle = self._normalize_filter(subtitle_filter)
+        
         cmd = [
             get_n_m3u8dl_re_path(),
             "--write-meta-json",
@@ -106,9 +126,9 @@ class MediaDownloader:
             "--save-dir", str(analysis_path),
             "--tmp-dir", str(analysis_path),
             "--save-name", "temp_analysis",
-            "--select-video", video_filter,
-            "--select-audio", audio_filter,
-            "--select-subtitle", subtitle_filter,
+            "--select-video", normalized_video,
+            "--select-audio", normalized_audio,
+            "--select-subtitle", normalized_subtitle,
             "--skip-download"
         ]
         cmd.extend(self._get_common_args())
@@ -116,23 +136,24 @@ class MediaDownloader:
 
         console.print("[cyan]Analyzing playlist...")
         log_parser = LogParser()
-        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", timeout=45)
+        
+        # Use errors='replace' to handle non-UTF-8 characters
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors='replace', timeout=request_timeout)
         
         # Save parsing log
         log_path = self.output_dir / f"{self.filename}_parsing.log"
-        with open(log_path, 'w', encoding='utf-8') as log_file:
+        with open(log_path, 'w', encoding='utf-8', errors='replace') as log_file:
             log_file.write(f"Command: {' '.join(cmd)}\n{'='*80}\n\n")
             log_file.write(result.stdout)
             if result.stderr:
                 log_file.write("\n--- STDERR ---\n")
                 log_file.write(result.stderr)
         
-        # Parse stderr for warnings/errors
+        # Parse stderr and stdout
         for line in result.stderr.split('\n'):
             if line.strip():
                 log_parser.parse_line(line)
         
-        # Also parse stdout
         for line in result.stdout.split('\n'):
             if line.strip():
                 log_parser.parse_line(line)
@@ -230,7 +251,7 @@ class MediaDownloader:
             return []
         
         downloaded = []
-        async with httpx.AsyncClient(headers=self.headers, timeout=30.0) as client:
+        async with httpx.AsyncClient(headers=self.headers, timeout=request_timeout) as client:
             for sub in self.external_subtitles:
                 try:
                     # Skip external subtitles that were marked as not selected (default: True)
@@ -271,7 +292,11 @@ class MediaDownloader:
         log_parser = LogParser()
         select_video = ("best" if getattr(self, "force_best_video", False) else video_filter)
         
-        # Build command list
+        # Normalize all filter values
+        normalized_video = self._normalize_filter(select_video)
+        normalized_audio = self._normalize_filter(audio_filter)
+        normalized_subtitle = self._normalize_filter(subtitle_filter)
+        
         cmd = [get_n_m3u8dl_re_path()]
         
         # Options
@@ -284,12 +309,11 @@ class MediaDownloader:
         cmd.extend(["--write-meta-json", "false"])
         cmd.extend(["--binary-merge"])
         cmd.extend(["--del-after-done"])
-        cmd.extend(["--select-video", select_video])
-        cmd.extend(["--select-audio", audio_filter])
-        cmd.extend(["--select-subtitle", subtitle_filter])
+        cmd.extend(["--select-video", normalized_video])
+        cmd.extend(["--select-audio", normalized_audio])
+        cmd.extend(["--select-subtitle", normalized_subtitle])
         cmd.extend(["--auto-subtitle-fix", "false"])        # CON TRUE ALCUNE VOLTE NON SCARICATA TUTTI I SUB SELEZIONATI
         
-        # Common args (headers, proxy, ansi)
         cmd.extend(self._get_common_args())
 
         if concurrent_download:
@@ -307,28 +331,25 @@ class MediaDownloader:
         if real_time_decryption:
             cmd.extend(["--mp4-real-time-decryption", "true"])
         
-        # Add key if provided
         if self.key:
             keys = [self.key] if isinstance(self.key, str) else self.key
             for single_key in keys:
                 cmd.extend(["--key", single_key])
         
-        # Input URL always at the end to avoid confusion with flags
         cmd.append(self.url)
 
         console.print("\n[cyan]Starting download...")
         
-        # Download external subtitles in parallel
+        # Download external subtitles
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         external_subs = loop.run_until_complete(self._download_external_subtitles())
         
-        # Start main download
         log_parser = LogParser()
         log_path = self.output_dir / f"{self.filename}_download.log"
         subtitle_sizes = {}
         
-        with open(log_path, 'w', encoding='utf-8') as log_file:
+        with open(log_path, 'w', encoding='utf-8', errors='replace') as log_file:
             log_file.write(f"Command: {' '.join(cmd)}\n{'='*80}\n\n")
             
             with Progress(
@@ -342,7 +363,10 @@ class MediaDownloader:
                 
                 tasks = {}
                 
-                with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8") as proc:
+                # Use errors='replace' to handle encoding issues
+                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors='replace')
+
+                with proc:
                     for line in proc.stdout:
                         line = line.rstrip()
                         if not line:
@@ -363,12 +387,11 @@ class MediaDownloader:
                     
                     proc.wait()
         
-        # Get final status
         self.status = self._get_download_status(subtitle_sizes, external_subs)
         return self.status
 
     def _update_task(self, progress, tasks: dict, key: str, label: str, line: str):
-        """Generic task update helper to reduce duplication"""
+        """Generic task update helper"""
         if key not in tasks:
             tasks[key] = progress.add_task(
                 f"[yellow]{self.manifest_type} {label}",
@@ -398,7 +421,7 @@ class MediaDownloader:
         return task
 
     def _parse_progress_line(self, line: str, progress, tasks: dict, subtitle_sizes: dict):
-        """Parse a progress line and update progress bars with better colors"""
+        """Parse a progress line and update progress bars"""
         
         # 1) Video progress
         if line.startswith("Vid"):
@@ -462,7 +485,7 @@ class MediaDownloader:
         console.print(table)
 
     def _extract_language_from_filename(self, filename: str, base_name: str) -> str:
-        """Extract language from filename by removing base name and extension"""
+        """Extract language from filename"""
         stem = filename[len(base_name):].lstrip('.') if filename.startswith(base_name) else filename
         return stem.rsplit('.', 1)[0].split('.')[0] if '.' in stem else stem
 
@@ -489,9 +512,6 @@ class MediaDownloader:
             
             if sz := convert_size_to_bytes(size_str):
                 downloaded_subs.append({'lang': lang, 'name': name, 'size': sz, 'used': False})
-
-        if downloaded_subs:
-            pass
 
         def norm_lang(lang): 
             return set(lang.lower().replace('-', '.').split('.'))
