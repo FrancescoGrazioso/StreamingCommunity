@@ -16,8 +16,6 @@ from StreamingCommunity.utils.os import os_manager
 from ..site import get_session_and_csrf
 
 
-
-
 class ScrapSerie:
     def __init__(self, url, site_url):
         """Initialize the ScrapSerie object with the provided URL and setup the HTTP client."""

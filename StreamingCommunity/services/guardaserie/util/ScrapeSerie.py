@@ -13,7 +13,6 @@ from StreamingCommunity.utils.http_client import create_client, get_userAgent
 from StreamingCommunity.services._base.object import SeasonManager, MediaItem
 
 
-
 class GetSerieInfo:
     def __init__(self, dict_serie: MediaItem) -> None:
         """

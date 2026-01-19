@@ -11,21 +11,14 @@ from rich.prompt import Prompt
 
 # Internal utilities
 from StreamingCommunity.utils import start_message, config_manager
-from StreamingCommunity.core.downloader import HLS_Downloader
 from StreamingCommunity.services._base import site_constants, MediaItem
-from StreamingCommunity.services._base.episode_manager import (
-    manage_selection, 
-    map_episode_title,
-    validate_selection, 
-    validate_episode_selection, 
-    display_episodes_list,
-    display_seasons_list
-)
+from StreamingCommunity.services._base.episode_manager import (manage_selection, map_episode_title, validate_selection, validate_episode_selection, display_episodes_list, display_seasons_list)
+from StreamingCommunity.core.downloader import HLS_Downloader
+from StreamingCommunity.player.supervideo import VideoSource
 
 
 # Logic
 from .util.ScrapeSerie import GetSerieInfo
-from StreamingCommunity.player.supervideo import VideoSource
 
 
 # Variable

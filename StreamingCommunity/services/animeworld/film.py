@@ -11,11 +11,11 @@ from rich.console import Console
 from StreamingCommunity.utils import os_manager, start_message
 from StreamingCommunity.services._base import site_constants, MediaItem
 from StreamingCommunity.core.downloader import MP4_Downloader
+from StreamingCommunity.player.sweetpixel import VideoSource
 
 
 # Logic
 from .util.ScrapeSerie import ScrapSerie
-from StreamingCommunity.player.sweetpixel import VideoSource
 
 
 # Variable

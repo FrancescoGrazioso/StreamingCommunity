@@ -14,11 +14,11 @@ from StreamingCommunity.utils import os_manager, start_message
 from StreamingCommunity.services._base import site_constants, MediaItem
 from StreamingCommunity.services._base.episode_manager import manage_selection, dynamic_format_number
 from StreamingCommunity.core.downloader import MP4_Downloader, HLS_Downloader
+from StreamingCommunity.player.vixcloud import VideoSourceAnime
 
 
 # Logis
 from .util.ScrapeSerie import ScrapeSerieAnime
-from StreamingCommunity.player.vixcloud import VideoSourceAnime
 
 
 # Variable

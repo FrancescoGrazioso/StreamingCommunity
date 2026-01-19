@@ -13,12 +13,12 @@ from StreamingCommunity.utils import os_manager, config_manager, start_message
 from StreamingCommunity.utils.http_client import create_client, get_headers
 from StreamingCommunity.services._base import site_constants, MediaItem
 from StreamingCommunity.core.downloader import DASH_Downloader, HLS_Downloader
+from StreamingCommunity.player.mediapolisvod import VideoSource
 
 
 # Logic
 from .util.get_license import generate_license_url
 from .util.fix_mpd import fix_manifest_url
-from StreamingCommunity.player.mediapolisvod import VideoSource
 
 
 # Variable

@@ -1,6 +1,7 @@
 # 05.01.26
 
 import os
+import json
 import time
 import glob
 import shutil
@@ -74,6 +75,7 @@ class DASH_Downloader:
         # DRM info
         self.drm_info = None
         self.decryption_keys = []
+        self.kid_to_label = {}
         
         # MediaDownloader instance
         self.media_downloader = None
@@ -83,12 +85,43 @@ class DASH_Downloader:
         self.error = None
         self.last_merge_result = None
     
-    def _fetch_drm_info(self) -> bool:
+    def _fetch_drm_info(self, selected_ids: list = None) -> bool:
         """Parse MPD and extract DRM information from raw.mpd file if available, otherwise fetch from URL"""
         try:
             parser = MPDParser(self.mpd_url, headers=self.mpd_headers)
             parser.parse_from_file(self.raw_mpd)
-            self.drm_info = parser.get_drm_info(self.drm_preference)
+            
+            # Map KIDs to labels for better key logging
+            self.kid_to_label = {}
+            sets = parser.get_adaptation_sets_info(selected_ids)
+            
+            # Group by type to determine if 'all' or specific
+            groups = {}
+            for s in sets:
+                if s['content_type'] in ('image', 'text'): 
+                    continue
+                groups.setdefault(s['content_type'], []).append(s)
+            
+            for c_type, items in groups.items():
+                is_uni = len({i['default_kid'] for i in items}) == 1
+                for i in items:
+                    if not i['default_kid']: 
+                        continue
+                    norm_kid = i['default_kid'].lower().replace('-', '')
+                    
+                    if is_uni:
+                        label = f"all {c_type}"
+                    else:
+                        parts = [c_type]
+                        if i.get('height'): 
+                            parts.append(f"{i['height']}p")
+                        if i.get('language') and i['language'] != 'N/A': 
+                            parts.append(f"({i['language']})")
+                        label = " ".join(parts)
+                    
+                    self.kid_to_label[norm_kid] = label
+
+            self.drm_info = parser.get_drm_info(self.drm_preference, selected_ids=selected_ids)
             return True
             
         except Exception as e:
@@ -111,7 +144,8 @@ class DASH_Downloader:
                     license_url=self.license_url,
                     cdm_device_path=get_wvd_path(),
                     headers=self.license_headers,
-                    key=self.key
+                    key=self.key,
+                    kid_to_label=getattr(self, 'kid_to_label', None)
                 )
 
             elif drm_type == DRMSystem.PLAYREADY:
@@ -120,7 +154,8 @@ class DASH_Downloader:
                     license_url=self.license_url,
                     cdm_device_path=get_prd_path(),
                     headers=self.license_headers,
-                    key=self.key
+                    key=self.key,
+                    kid_to_label=getattr(self, 'kid_to_label', None)
                 )
 
             else:
@@ -167,7 +202,30 @@ class DASH_Downloader:
         # Parse MPD for DRM info (uses raw.mpd if available, falls back to URL)
         console.print("\n[cyan]Starting fetching decryption keys...")
         self.meta_json, self.meta_selected, _, self.raw_mpd = self.media_downloader.get_metadata()
-        self._fetch_drm_info()
+        
+        # Determine selected track IDs for optimized key fetching
+        selected_ids = []
+        try:
+            if os.path.exists(self.meta_selected):
+                with open(self.meta_selected, 'r', encoding='utf-8-sig') as f:
+                    selected_data = json.load(f)
+                    selected_ids = [item.get('GroupId') for item in selected_data if item.get('GroupId')]
+            
+            # If no video selected but m3u8dl will force 'best', find the best video GroupId
+            if self.media_downloader.force_best_video and os.path.exists(self.meta_json):
+                with open(self.meta_json, 'r', encoding='utf-8-sig') as f:
+                    meta_data = json.load(f)
+                    # Filter for video tracks (usually no MediaType field and has Bandwidth)
+                    videos = [item for item in meta_data if not item.get('MediaType') and item.get('Bandwidth')]
+                    if videos:
+                        best_video = max(videos, key=lambda x: x.get('Bandwidth', 0))
+                        if best_video.get('GroupId') and best_video['GroupId'] not in selected_ids:
+                            selected_ids.append(best_video['GroupId'])
+
+        except Exception as e:
+            console.print(f"[yellow]Warning: Could not determine selected tracks for optimized DRM: {e}")
+
+        self._fetch_drm_info(selected_ids=selected_ids)
         
         # Fetch decryption keys if DRM protected
         if self.drm_info and self.drm_info['available_drm_types']:
@@ -204,6 +262,11 @@ class DASH_Downloader:
 
     def _merge_files(self, status) -> Optional[str]:
         """Merge downloaded files using FFmpeg"""
+        if not status or not status.get('video') or not status['video'].get('path'):
+            console.print("[red]Error: Video track information missing in download status")
+            self.error = "Video track missing"
+            return None
+
         video_path = status['video'].get('path')
         
         if not os.path.exists(video_path):

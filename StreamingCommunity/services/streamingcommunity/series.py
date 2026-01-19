@@ -13,20 +13,13 @@ from rich.prompt import Prompt
 from StreamingCommunity.utils import config_manager, start_message
 from StreamingCommunity.services._base import site_constants, MediaItem
 from StreamingCommunity.core.media import tmdb_client
-from StreamingCommunity.services._base.episode_manager import (
-    manage_selection, 
-    map_episode_title, 
-    validate_selection, 
-    validate_episode_selection, 
-    display_episodes_list,
-    display_seasons_list
-)
+from StreamingCommunity.services._base.episode_manager import (manage_selection, map_episode_title, validate_selection, validate_episode_selection, display_episodes_list, display_seasons_list)
 from StreamingCommunity.core.downloader import HLS_Downloader
+from StreamingCommunity.player.vixcloud import VideoSource
 
 
 # Logic
 from .util.ScrapeSerie import GetSerieInfo
-from StreamingCommunity.player.vixcloud import VideoSource
 
 
 # Variable

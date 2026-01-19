@@ -11,7 +11,6 @@ from StreamingCommunity.services._base import site_constants, MediaManager
 from StreamingCommunity.utils import TVShowManager
 
 
-
 # Variable
 console = Console()
 media_search_manager = MediaManager()

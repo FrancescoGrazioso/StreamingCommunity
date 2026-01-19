@@ -8,7 +8,6 @@ from StreamingCommunity.utils.http_client import create_client, get_headers
 from StreamingCommunity.services._base.object import SeasonManager
 
 
-
 class GetSerieInfo:
     def __init__(self, path_id: str):
         """Initialize the GetSerieInfo class."""

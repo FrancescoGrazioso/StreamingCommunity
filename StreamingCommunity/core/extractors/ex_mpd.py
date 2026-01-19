@@ -109,8 +109,10 @@ class ContentProtectionHandler:
     def get_default_kid(self, element: ET.Element) -> Optional[str]:
         """Extract default_KID from ContentProtection elements"""
         for cp in self.ns.findall(element, 'mpd:ContentProtection'):
-            if DRMSystem.CENC_SCHEME in (cp.get('schemeIdUri') or '').lower():
-                return cp.get(f'{{{self.ns.nsmap["cenc"]}}}default_KID') or cp.get('default_KID')
+            target_attr = f'{{{self.ns.nsmap.get("cenc", "")}}}default_KID'
+            kid = cp.get(target_attr) or cp.get('default_KID')
+            if kid:
+                return kid
         
         return None
     
@@ -197,13 +199,14 @@ class ContentProtectionHandler:
         
         return pssh_list
 
-    def extract_pssh_full(self, root: ET.Element, drm_type: str = DRMSystem.WIDEVINE) -> List[Dict[str, str]]:
+    def extract_pssh_full(self, root: ET.Element, drm_type: str = DRMSystem.WIDEVINE, target_kids: List[str] = None) -> List[Dict[str, str]]:
         target_uuid = DRMSystem.get_uuid(drm_type)
         if not target_uuid:
             return []
         
         pssh_list = []
         observed = set()
+        norm_target_kids = [k.lower().replace('-', '') for k in target_kids] if target_kids else None
 
         # Check AdaptationSets
         for period in self.ns.findall(root, 'mpd:Period'):
@@ -216,6 +219,20 @@ class ContentProtectionHandler:
                 
                 default_kid = self.get_default_kid(adapt_set)
                 
+                # Check for target KIDs filter
+                if norm_target_kids:
+                    potential_kids = []
+                    if default_kid:
+                        potential_kids.append(default_kid.lower().replace('-', ''))
+                    
+                    for rep in self.ns.findall(adapt_set, 'mpd:Representation'):
+                        rkid = self.get_default_kid(rep)
+                        if rkid:
+                            potential_kids.append(rkid.lower().replace('-', ''))
+                    
+                    if not any(tk in potential_kids for tk in norm_target_kids):
+                        continue
+
                 # Check directly in AdaptationSet
                 for cp in self.ns.findall(adapt_set, 'mpd:ContentProtection'):
                     scheme_id = (cp.get('schemeIdUri') or '').lower()
@@ -312,8 +329,8 @@ class MPDParser:
             console.print(f"[red]Error parsing MPD: {e}")
             return False
     
-    def get_adaptation_sets_info(self) -> List[Dict[str, any]]:
-        """Get information about all AdaptationSets including KID"""
+    def get_adaptation_sets_info(self, selected_ids: List[str] = None) -> List[Dict[str, any]]:
+        """Get information about all AdaptationSets including KID, optionally filtered by selected IDs"""
         if self.root is None or self.ns_manager is None:
             return []
         
@@ -322,29 +339,58 @@ class MPDParser:
         for period in self.ns_manager.findall(self.root, 'mpd:Period'):
             for adapt_set in self.ns_manager.findall(period, 'mpd:AdaptationSet'):
                 adapt_id = adapt_set.get('id', 'N/A')
-                content_type = adapt_set.get('contentType', 'N/A')
+                rep_ids = [rep.get('id') for rep in self.ns_manager.findall(adapt_set, 'mpd:Representation')]
+
+                # Filter by selected IDs if provided
+                if selected_ids:
+                    if adapt_id not in selected_ids and not any(rid in selected_ids for rid in rep_ids):
+                        continue
+
+                content_type = adapt_set.get('contentType') or adapt_set.get('mimeType', 'unknown')
+                if 'video' in content_type.lower():
+                    content_type = 'video'
+                elif 'audio' in content_type.lower():
+                    content_type = 'audio'
                 lang = adapt_set.get('lang', 'N/A')
                 
-                # Get default_KID
+                # Get default_KID (check AdaptationSet then Representations)
                 default_kid = self.protection_handler.get_default_kid(adapt_set)
-                
-                # Get DRM types
                 drm_types = self.protection_handler.get_drm_types(adapt_set)
                 
+                # Metadata for display
+                width = None
+                height = None
+                
+                reps = self.ns_manager.findall(adapt_set, 'mpd:Representation')
+                for rep in reps:
+                    if not default_kid:
+                        default_kid = self.protection_handler.get_default_kid(rep)
+                    
+                    if not width: 
+                        width = rep.get('width')
+                    if not height: 
+                        height = rep.get('height')
+                    
+                    # If DRM types still empty, check representations
+                    if not drm_types:
+                        drm_types = self.protection_handler.get_drm_types(rep)
+
                 adaptation_sets.append({
                     'id': adapt_id,
                     'content_type': content_type,
                     'language': lang,
                     'default_kid': default_kid,
                     'drm_types': drm_types,
-                    'is_protected': self.protection_handler.is_protected(adapt_set)
+                    'is_protected': self.protection_handler.is_protected(adapt_set),
+                    'width': width,
+                    'height': height
                 })
         
         return adaptation_sets
     
-    def print_adaptation_sets_info(self):
+    def print_adaptation_sets_info(self, selected_ids: List[str] = None):
         """Print AdaptationSets information in a simplified format"""
-        sets = [s for s in self.get_adaptation_sets_info() if s['content_type'] not in ('image', 'text')]
+        sets = [s for s in self.get_adaptation_sets_info(selected_ids) if s['content_type'] not in ('image', 'text')]
         if not sets: 
             return
 
@@ -353,15 +399,33 @@ class MPDParser:
             groups.setdefault(s['content_type'], []).append(s)
 
         for c_type, items in groups.items():
+            # Consider unique if all have same KID
             is_uni = len({i['default_kid'] for i in items}) == 1
+            
+            seen_items = set()
             for i in ([items[0]] if is_uni else items):
                 kid = i['default_kid'] or 'Not found'
                 prot = (', '.join(i['drm_types']) or 'Unknown') if i['is_protected'] else 'No'
-                label = f"all {c_type}" if is_uni else f"{c_type} {i['language'] if i['language'] != 'N/A' else ''}".strip()
+                
+                if is_uni:
+                    label = f"all {c_type}"
+                else:
+                    parts = [c_type]
+                    if i.get('height'): 
+                        parts.append(f"{i['height']}p")
+                    if i.get('language') and i['language'] != 'N/A': 
+                        parts.append(f"({i['language']})")
+                    label = " ".join(parts)
+                
+                # Deduplicate display based on label and KID
+                display_key = f"{label}_{kid}"
+                if display_key in seen_items:
+                    continue
+                seen_items.add(display_key)
                 
                 console.print(f"    [red]- {label}[white], [cyan]Kid: [yellow]{kid}, [cyan]Protection: [yellow]{prot}")
 
-    def get_drm_info(self, drm_preference: str = 'widevine') -> Dict[str, any]:
+    def get_drm_info(self, drm_preference: str = 'widevine', selected_ids: List[str] = None) -> Dict[str, any]:
         """Extract DRM information from MPD"""
         if not self.root: 
             return {
@@ -372,13 +436,18 @@ class MPDParser:
                 'fairplay_pssh': []
             }
         
-        pssh_data = {t: self.protection_handler.extract_pssh_full(self.root, t) 
+        # Get target KIDs if selected_ids provided
+        target_kids = None
+        if selected_ids:
+            target_kids = [s['default_kid'] for s in self.get_adaptation_sets_info(selected_ids) if s['default_kid']]
+
+        pssh_data = {t: self.protection_handler.extract_pssh_full(self.root, t, target_kids=target_kids) 
                      for t in [DRMSystem.WIDEVINE, DRMSystem.PLAYREADY, DRMSystem.FAIRPLAY]}
         
         avail = [t for t, v in pssh_data.items() if v]
         sel_type = drm_preference if drm_preference in avail else (avail[0] if avail else None)
         
-        self.print_adaptation_sets_info()
+        self.print_adaptation_sets_info(selected_ids)
         print("")
         return {
             'available_drm_types': avail,

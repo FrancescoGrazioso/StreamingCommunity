@@ -7,12 +7,12 @@ from rich.console import Console
 # Internal utilities
 from StreamingCommunity.services._base import site_constants
 from StreamingCommunity.services._base.object import MediaItem
+from StreamingCommunity.player.vixcloud import VideoSourceAnime
 
 
 # Logic
 from .serie import download_episode
 from .util.ScrapeSerie import ScrapeSerieAnime
-from StreamingCommunity.player.vixcloud import VideoSourceAnime
 
 
 # Variable

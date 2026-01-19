@@ -15,7 +15,7 @@ from pyplayready.system.pssh import PSSH
 console = Console()
 
 
-def get_playready_keys(pssh_list: list[dict], license_url: str, cdm_device_path: str, headers: dict = None, key: str = None):
+def get_playready_keys(pssh_list: list[dict], license_url: str, cdm_device_path: str, headers: dict = None, key: str = None, kid_to_label: dict = None):
     """
     Extract PlayReady CONTENT keys (KID/KEY) from a license using pyplayready.
 
@@ -25,6 +25,7 @@ def get_playready_keys(pssh_list: list[dict], license_url: str, cdm_device_path:
         - cdm_device_path (str): Path to CDM file (device.prd).
         - headers (dict): Optional HTTP headers for the license request.
         - key (str): Optional raw license data to bypass HTTP request.
+        - kid_to_label (dict): Mapping from KID (hex) to track label.
 
     Returns:
         list: List of strings "KID:KEY" (only CONTENT keys) or None if error.
@@ -105,7 +106,10 @@ def get_playready_keys(pssh_list: list[dict], license_url: str, cdm_device_path:
 
         # Return keys
         for i, k in enumerate(all_content_keys):
-            console.print(f"    [yellow]{i}) [cyan]Extracted kid: [red]{k.split(':')[0]} [cyan]| key: [green]{k.split(':')[1]}")
+            kid, key_val = k.split(':')
+            label = kid_to_label.get(kid.lower()) if kid_to_label else None
+            label_str = f" [cyan]| [red]{label}" if label else ""
+            console.print(f"    [yellow]{i}) [cyan]Extracted kid: [red]{kid} [cyan]| key: [green]{key_val}{label_str}")
         
         return all_content_keys if all_content_keys else None
     

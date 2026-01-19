@@ -9,8 +9,8 @@ from rich.console import Console
 
 # Internal utilities
 from StreamingCommunity.utils.http_client import create_client_curl, get_userAgent
-from StreamingCommunity.utils import TVShowManager
 from StreamingCommunity.services._base import site_constants, MediaManager
+from StreamingCommunity.utils import TVShowManager
 
 
 # Variable

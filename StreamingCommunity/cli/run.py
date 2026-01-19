@@ -36,15 +36,12 @@ COLOR_MAP = {
 }
 CATEGORY_MAP = {1: "anime", 2: "film_&_serie", 3: "serie"}
 SHOW_DEVICE_INFO = config_manager.config.get_bool('DEFAULT', 'show_device_info')
+NOT_CLOSE = config_manager.config.get_bool('DEFAULT', 'close_console')
 
 
-def run_function(func: Callable[..., None], close_console: bool = False, search_terms: str = None) -> None:
+def run_function(func: Callable[..., None], search_terms: str = None) -> None:
     """Run function once or indefinitely based on close_console flag."""
-    if close_console:
-        while 1:
-            func(search_terms)
-    else:
-        func(search_terms)
+    func(search_terms)
 
 
 def initialize():
@@ -292,6 +289,9 @@ def setup_argument_parser(search_functions):
     parser.add_argument('-s', '--search', default=None, help='Search terms')
     parser.add_argument('--global', action='store_true', help='Global search across sites')
     parser.add_argument('--not_close', type=bool, help='Keep console open after execution')
+    parser.add_argument('--s_video', type=str)
+    parser.add_argument('--s_audio', type=str)
+    parser.add_argument('--s_subtitle', type=str)
     parser.add_argument('--category', type=int, help='Category (1: anime, 2: film_&_serie, 3: serie, 4: torrent)')
     parser.add_argument('--auto-first', action='store_true', help='Auto-download first result (use with --site and --search)')
     parser.add_argument('--site', type=str, help='Site by name or index')
@@ -304,6 +304,9 @@ def apply_config_updates(args):
     config_updates = {}
     
     arg_mappings = {
+        's_video': 'M3U8_DOWNLOAD.select_video',
+        's_audio': 'M3U8_DOWNLOAD.select_audio',
+        's_subtitle': 'M3U8_DOWNLOAD.select_subtitle',
         'not_close': 'DEFAULT.not_close'
     }
     
@@ -413,20 +416,42 @@ def main():
         input_to_function, choice_labels, module_name_to_function = build_function_mappings(search_functions)
         if handle_direct_site_selection(args, input_to_function, module_name_to_function, args.search):
             return
+        
+        if not NOT_CLOSE:
+            while True:
+                category = get_user_site_selection(args, choice_labels)
 
-        category = get_user_site_selection(args, choice_labels)
-        if category == "global":
-            call_global_search(args.search)
-            return
+                if category == "global":
+                    call_global_search(args.search)
+                    return
 
-        if category in input_to_function:
-            run_function(input_to_function[category], search_terms=args.search)
+                if category in input_to_function:
+                    run_function(input_to_function[category], search_terms=args.search)
+                else:
+                    console.print("[red]Invalid category.")
+                    if getattr(args, 'not_close'):
+                        restart_script()
+                    else:
+                        force_exit()
+                
+                user_response = msg.ask("\n[cyan]Do you want to perform another search? (y/n)", choices=["y", "n"], default="n")
+                if user_response.lower() != 'y':
+                    break
+
         else:
-            console.print("[red]Invalid category.")
-            if getattr(args, 'not_close'):
-                restart_script()
+            category = get_user_site_selection(args, choice_labels)
+            if category == "global":
+                call_global_search(args.search)
+                return
+
+            if category in input_to_function:
+                run_function(input_to_function[category], search_terms=args.search)
             else:
-                force_exit()
+                console.print("[red]Invalid category.")
+                if getattr(args, 'not_close'):
+                    restart_script()
+                else:
+                    force_exit()
                 
     finally:
         execute_hooks('post_run')

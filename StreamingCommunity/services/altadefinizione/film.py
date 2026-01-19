@@ -14,9 +14,6 @@ from StreamingCommunity.utils import os_manager, start_message, config_manager
 from StreamingCommunity.utils.http_client import create_client, get_headers
 from StreamingCommunity.services._base import site_constants, MediaItem
 from StreamingCommunity.core.downloader import HLS_Downloader
-
-
-# Logic
 from StreamingCommunity.player.supervideo import VideoSource
 
 

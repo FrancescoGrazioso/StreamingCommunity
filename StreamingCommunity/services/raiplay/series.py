@@ -13,22 +13,15 @@ from rich.prompt import Prompt
 from StreamingCommunity.utils import config_manager, start_message
 from StreamingCommunity.utils.http_client import get_userAgent
 from StreamingCommunity.services._base import site_constants, MediaItem
-from StreamingCommunity.services._base.episode_manager import (
-    manage_selection, 
-    map_episode_title,
-    validate_selection, 
-    validate_episode_selection, 
-    display_episodes_list,
-    display_seasons_list
-)
+from StreamingCommunity.services._base.episode_manager import (manage_selection, map_episode_title, validate_selection, validate_episode_selection, display_episodes_list, display_seasons_list)
 from StreamingCommunity.core.downloader import DASH_Downloader, HLS_Downloader
+from StreamingCommunity.player.mediapolisvod import VideoSource
 
 
 # Logic
 from .util.ScrapeSerie import GetSerieInfo
 from .util.get_license import generate_license_url
 from .util.fix_mpd import fix_manifest_url
-from StreamingCommunity.player.mediapolisvod import VideoSource
 
 
 

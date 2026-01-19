@@ -65,22 +65,31 @@ class MediaDownloader:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def _normalize_filter(self, filter_value: str) -> str:
-        """Normalize filter removing outer quotes if present"""
+        """Normalize filter ensuring values are quoted if they contain special characters"""
         if not filter_value:
             return filter_value
         
-        # Pattern: key='value' or key="value"
-        pattern = r"([a-zA-Z_-]+)='([^']+)'"
+        # Split by colon, but only if not preceded by a backslash
+        parts = filter_value.split(':')
+        normalized_parts = []
+        special_chars = '|.*+?[]{}()^$'
         
-        def replacer(match):
-            key, value = match.groups()
+        for part in parts:
+            if '=' in part:
+                key, val = part.split('=', 1)
 
-            # If contains special characters, keep quotes
-            if any(c in value for c in '|.*+?[]{}()^$'):
-                return f'{key}="{value}"'
-            return f'{key}={value}'
+                # Remove any existing quotes
+                val = val.strip("'\"")
+                
+                # If contains special characters, ensure double quotes
+                if any(c in val for c in special_chars):
+                    normalized_parts.append(f'{key}="{val}"')
+                else:
+                    normalized_parts.append(f'{key}={val}')
+            else:
+                normalized_parts.append(part)
         
-        return re.sub(pattern, replacer, filter_value)
+        return ':'.join(normalized_parts)
 
     def _get_common_args(self) -> List[str]:
         """Get common command line arguments for N_m3u8DL-RE"""
@@ -493,8 +502,8 @@ class MediaDownloader:
         """Get final download status"""
         status = {'video': None, 'audios': [], 'subtitles': [], 'external_subtitles': external_subs}
         exts = {
-            'video': ['.mp4', '.mkv', '.m4v', '.ts', '.mov'],
-            'audio': ['.m4a', '.aac', '.mp3', '.ts', '.mp4', '.wav'],
+            'video': ['.mp4', '.mkv', '.m4v', '.ts', '.mov', '.webm'],
+            'audio': ['.m4a', '.aac', '.mp3', '.ts', '.mp4', '.wav', '.webm'],
             'subtitle': ['.srt', '.vtt', '.ass', '.sub', '.ssa']
         }
         
