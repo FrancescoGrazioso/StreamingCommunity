@@ -80,8 +80,10 @@ class HLS_Downloader:
         os_manager.create_path(self.output_dir)
         status = self.media_downloader.start_download()
 
-        # Get final status
-        status = self.media_downloader.get_status()
+        # Check if any media was downloaded
+        if status.get('video') is None and status.get('audios') == [] and status.get('subtitles') == [] and status.get('external_subtitles') == []:
+            logging.error("No media downloaded")
+            return None, True
 
         # Merge files using FFmpeg
         final_file = self._merge_files(status)

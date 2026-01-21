@@ -235,7 +235,12 @@ class DASH_Downloader:
         
         # Set decryption keys on the existing MediaDownloader instance
         self.media_downloader.set_key(self.decryption_keys if self.decryption_keys else None)
-        status = self.media_downloader.start_download()    
+        status = self.media_downloader.start_download()
+        
+        # Check if any media was downloaded
+        if status.get('video') is None and status.get('audios') == [] and status.get('subtitles') == [] and status.get('external_subtitles') == []:
+            logging.error("No media downloaded")
+            return None, True
     
         # Merge files using FFmpeg
         final_file = self._merge_files(status)

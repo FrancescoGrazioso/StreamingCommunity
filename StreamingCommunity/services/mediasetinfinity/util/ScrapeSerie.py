@@ -317,14 +317,22 @@ class GetSerieInfo:
         """
         if not self.seasons_manager.seasons:
             self.collect_season()
-        
-        # Convert 1-based user input to 0-based array index
-        season_index = season_number - 1
-        
-        # Get season by index in the available seasons list
-        season = self.seasons_manager.seasons[season_index]
-        
-        return season.episodes.episodes
+            
+        # Try to find a season object whose `.number` matches the requested season_number
+        available_numbers = [s.number for s in self.seasons_manager.seasons]
+
+        for s in self.seasons_manager.seasons:
+            if s.number == season_number:
+                return s.episodes.episodes
+
+        # Fallback: treat the input as a 1-based index into the seasons list (legacy behavior)
+        idx = season_number - 1
+        if 0 <= idx < len(self.seasons_manager.seasons):
+            return self.seasons_manager.seasons[idx].episodes.episodes
+
+        # If we still can't find it, log and return empty list instead of raising
+        logging.error(f"Season {season_number} not found. Available seasons: {available_numbers}")
+        return []
         
     def selectEpisode(self, season_number: int, episode_index: int) -> dict:
         """
