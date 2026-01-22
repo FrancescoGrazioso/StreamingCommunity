@@ -192,7 +192,7 @@ class MPDParser:
         # Normalize filter parameters
         norm_selected_ids = [str(i) for i in (selected_ids or [])]
         norm_selected_kids = [k.lower().replace('-', '') for k in (selected_kids or []) if k]
-        norm_selected_langs = [l.lower() for l in (selected_langs or []) if l]
+        norm_selected_langs = [lang.lower() for lang in (selected_langs or []) if lang]
         norm_selected_periods = [str(p) for p in (selected_periods or []) if p]
         
         for period in self._findall(self.root, 'mpd:Period'):

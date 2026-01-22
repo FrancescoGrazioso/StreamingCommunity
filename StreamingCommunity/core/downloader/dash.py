@@ -3,7 +3,6 @@
 import os
 import json
 import time
-import glob
 import shutil
 import logging
 from typing import Dict
@@ -60,8 +59,8 @@ class DASH_Downloader:
         if not self.output_path.endswith(f'.{EXTENSION_OUTPUT}'):
             self.output_path += f'.{EXTENSION_OUTPUT}'
         
-        self.output_dir = os.path.dirname(self.output_path)
         self.filename_base = os.path.splitext(os.path.basename(self.output_path))[0]
+        self.output_dir = os.path.join(os.path.dirname(self.output_path), self.filename_base + "_dash_temp")
         self.file_already_exists = os.path.exists(self.output_path)
         
         # DRM and state
@@ -356,8 +355,7 @@ class DASH_Downloader:
         # Print summary and cleanup
         self._print_summary()
         if CLEANUP_TMP:
-            self._cleanup_temp_files(status)
-        
+            shutil.rmtree(self.output_dir, ignore_errors=True)
         return self.output_path, False
     
     def _no_media_downloaded(self, status):
@@ -453,58 +451,6 @@ class DASH_Downloader:
         else:
             console.print("[yellow]Subtitle merge failed, continuing without subtitles")
             return current_file
-    
-    def _cleanup_temp_files(self, status):
-        """Clean up temporary files."""
-        files_to_remove = []
-        
-        # Add original downloaded files
-        if status['video']:
-            files_to_remove.append(status['video'].get('path'))
-        
-        for track_list in ['audios', 'subtitles', 'external_subtitles']:
-            for track in status.get(track_list, []):
-                if path := track.get('path'):
-                    files_to_remove.append(path)
-        
-        # Add intermediate merge files
-        intermediate_patterns = [
-            f"{self.filename_base}_with_audio.{EXTENSION_OUTPUT}",
-            f"{self.filename_base}_final.{EXTENSION_OUTPUT}"
-        ]
-        
-        for pattern in intermediate_patterns:
-            file_path = os.path.join(self.output_dir, pattern)
-            if os.path.exists(file_path):
-                files_to_remove.append(file_path)
-        
-        # Remove files
-        for file_path in files_to_remove:
-            try:
-                if (os.path.exists(file_path) and 
-                    os.path.abspath(file_path) != os.path.abspath(self.output_path)):
-                    os.remove(file_path)
-            except Exception as e:
-                logging.warning(f"Could not remove temp file {file_path}: {e}")
-        
-        # Cleanup logs and temp directories
-        for log_file in glob.glob(os.path.join(self.output_dir, "*.log")):
-            try:
-                os.remove(log_file)
-            except Exception:
-                pass
-        
-        try:
-            shutil.rmtree(os.path.join(self.output_dir, "analysis_temp"), ignore_errors=True)
-        except Exception:
-            pass
-        
-        # Remove media player ignore files
-        try:
-            if self.media_players:
-                self.media_players.remove()
-        except Exception:
-            pass
     
     def _print_summary(self):
         """Print download summary."""

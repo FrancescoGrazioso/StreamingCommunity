@@ -1,7 +1,6 @@
 # 17.10.24
 
 import os
-import glob
 import shutil
 import logging
 from typing import Any, Dict, Optional
@@ -52,10 +51,8 @@ class HLS_Downloader:
             self.output_path += f'.{EXTENSION_OUTPUT}'
         
         # Extract directory and filename components ONCE
-        self.output_dir = os.path.dirname(self.output_path)
         self.filename_base = os.path.splitext(os.path.basename(self.output_path))[0]
-        
-        # Check if file already exists
+        self.output_dir = os.path.join(os.path.dirname(self.output_path), self.filename_base + "_hls_temp")
         self.file_already_exists = os.path.exists(self.output_path)
         
         # Status tracking
@@ -114,7 +111,7 @@ class HLS_Downloader:
         # Print summary and cleanup
         self._print_summary()
         if CLEANUP_TMP:
-            self._cleanup_temp_files(status)
+            shutil.rmtree(self.output_dir, ignore_errors=True)
         return self.output_path, False
 
     def _merge_files(self, status) -> Optional[str]:
@@ -185,56 +182,6 @@ class HLS_Downloader:
                 console.print("[yellow]Subtitle merge failed, continuing without subtitles")
     
         return current_file
-
-    def _cleanup_temp_files(self, status):
-        """Clean up temporary files"""
-        files_to_remove = []
-        
-        # Add original downloaded files
-        if status['video'] and os.path.abspath(status['video'].get('path')) != os.path.abspath(self.output_path):
-            files_to_remove.append(status['video'].get('path'))
-        
-        for audio in status['audios']:
-            if os.path.abspath(audio.get('path')) != os.path.abspath(self.output_path):
-                files_to_remove.append(audio.get('path'))
-        
-        for sub in status['subtitles']:
-            if os.path.abspath(sub.get('path')) != os.path.abspath(self.output_path):
-                files_to_remove.append(sub.get('path'))
-
-        for ext_sub in status['external_subtitles']:
-            if os.path.abspath(ext_sub.get('path')) != os.path.abspath(self.output_path):
-                files_to_remove.append(ext_sub.get('path'))
-        
-        # Remove intermediate merge files
-        intermediate_patterns = [
-            f"{self.filename_base}_with_audio.{EXTENSION_OUTPUT}",
-            f"{self.filename_base}_final.{EXTENSION_OUTPUT}"
-        ]
-        
-        for pattern in intermediate_patterns:
-            file_path = os.path.join(self.output_dir, pattern)
-            if os.path.exists(file_path) and os.path.abspath(file_path) != os.path.abspath(self.output_path):
-                files_to_remove.append(file_path)
-        
-        # Remove files
-        for file_path in files_to_remove:
-            try:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-            except Exception as e:
-                logging.warning(f"Could not remove temp file {file_path}: {e}")
-
-        for log_file in glob.glob(os.path.join(self.output_dir, "*.log")):
-            os.remove(log_file)
-        shutil.rmtree(os.path.join(self.output_dir, "analysis_temp"), ignore_errors=True)
-        
-        # Remove media player ignore files if created
-        try:
-            if getattr(self, 'media_players', None):
-                self.media_players.remove()
-        except Exception:
-            pass
 
     def _print_summary(self):
         """Print download summary"""
