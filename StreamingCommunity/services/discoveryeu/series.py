@@ -65,14 +65,12 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
         license_headers = generate_license_headers(playback_info['license_token'])
     
         # Download the episode
-        dash_process = DASH_Downloader(
+        return DASH_Downloader(
             mpd_url=playback_info['mpd_url'],
             license_url=playback_info['license_url'],
             license_headers=license_headers,
             output_path=os.path.join(mp4_path, mp4_name),
-        )
-        out_path, need_stop = dash_process.start()
-        return out_path, need_stop
+        ).start()
         
     elif playback_info['type'] == 'hls':
         
@@ -80,13 +78,11 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
         headers = api.get_request_headers()
         
         # Download the episode
-        hls_process =  HLS_Downloader(
+        return HLS_Downloader(
             m3u8_url=playback_info['mpd_url'],
             headers=headers,
             output_path=os.path.join(mp4_path, mp4_name),
-        )
-        out_path, need_stop = hls_process.start()
-        return out_path, need_stop
+        ).start()
 
 
 def download_series(select_season: MediaItem, season_selection: str = None, episode_selection: str = None) -> None:

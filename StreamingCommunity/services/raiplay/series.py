@@ -60,12 +60,10 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
 
     # HLS
     if ".mpd" not in master_playlist:
-        hls_process = HLS_Downloader(
+        return HLS_Downloader(
             m3u8_url=fix_manifest_url(master_playlist),
             output_path=os.path.join(mp4_path, mp4_name)
-        )
-        out_path, need_stop = hls_process.start()
-        return out_path, need_stop
+        ).start()
 
     # MPD
     else:
@@ -75,14 +73,12 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
             'user-agent': get_userAgent(),
         }
 
-        dash_process = DASH_Downloader(
+        return DASH_Downloader(
             mpd_url=master_playlist,
             license_url=full_license_url.split("?")[0],
             license_headers=license_headers,
             output_path=os.path.join(mp4_path, mp4_name),
-        )
-        out_path, need_stop = dash_process.start()
-        return out_path, need_stop
+        ).start()
 
 
 def download_series(select_season: MediaItem, season_selection: str = None, episode_selection: str = None) -> None:

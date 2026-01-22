@@ -62,14 +62,12 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
     license_headers = generate_license_headers(playback_info['license_token'])
     
     # Download the episode
-    dash_process = DASH_Downloader(
+    return DASH_Downloader(
         mpd_url=playback_info['mpd_url'],
         license_url=playback_info['license_url'],
         license_headers=license_headers,
         output_path=os.path.join(mp4_path, mp4_name),
-    )
-    out_path, need_stop = dash_process.start()
-    return out_path, need_stop
+    ).start()
 
 
 def download_series(select_season: MediaItem, season_selection: str = None, episode_selection: str = None) -> None:

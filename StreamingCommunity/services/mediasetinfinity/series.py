@@ -60,17 +60,13 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
     if license_params:
         license_url = f"{license_url}?{urllib.parse.urlencode(license_params)}"
 
-    mpd_url = get_manifest(tracking_info['videos'][0]['url'])
-
     # Download the episode
-    dash_process = DASH_Downloader(
-        mpd_url=mpd_url,
+    return DASH_Downloader(
+        mpd_url=get_manifest(tracking_info['videos'][0]['url']),
         license_url=license_url,
         mpd_sub_list=tracking_info['subtitles'],
         output_path=os.path.join(mp4_path, mp4_name),
-    )
-    out_path, need_stop = dash_process.start()
-    return out_path, need_stop
+    ).start()
     
 
 def download_series(dict_serie: MediaItem, season_selection: str = None, episode_selection: str = None) -> None:

@@ -57,12 +57,10 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
     master_playlist = video_source.get_playlist()
 
     # Download the episode
-    hls_process = HLS_Downloader(
+    return HLS_Downloader(
         m3u8_url=master_playlist,
         output_path=os.path.join(mp4_path, mp4_name)
-    )
-    out_path, need_stop = hls_process.start()
-    return out_path, need_stop
+    ).start()
 
 
 def download_series(select_season: MediaItem, season_selection: str = None, episode_selection: str = None) -> None:
