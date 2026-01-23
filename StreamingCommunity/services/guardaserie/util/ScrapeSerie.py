@@ -91,7 +91,7 @@ class GetSerieInfo:
                 # Extract episode information from data attributes
                 data_num = episode_link.get("data-num", "")
                 data_link = episode_link.get("data-link", "")
-                data_title = episode_link.get("data-title", "")
+                #data_title = episode_link.get("data-title", "")
                 
                 # Parse episode number from data-num
                 episode_number = data_num.split('x')[-1] if 'x' in data_num else data_num

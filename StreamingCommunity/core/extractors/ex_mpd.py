@@ -128,17 +128,40 @@ class MPDParser:
                 return kid
         return None
     
-    def _get_drm_types(self, element: ET.Element) -> List[str]:
-        """Extract DRM types from element."""
-        drm_types = []
+    def _get_drm_data(self, element: ET.Element) -> Dict[str, List[str]]:
+        """Extract DRM types and their PSSH data from element."""
+        drm_data = {}
         for cp in self._findall(element, 'mpd:ContentProtection'):
             scheme = cp.get('schemeIdUri', '').lower()
             drm_type = DRMSystem.from_uuid(scheme)
-            if drm_type and drm_type not in drm_types:
-                # Check for PSSH data
-                if self._has_pssh_data(cp, drm_type):
-                    drm_types.append(drm_type)
-        return drm_types
+            if not drm_type:
+                continue
+                
+            pssh_list = []
+            
+            # Check for cenc:pssh
+            pssh_elem = self._find(cp, 'cenc:pssh')
+            if pssh_elem is not None and pssh_elem.text and pssh_elem.text.strip():
+                pssh_val = pssh_elem.text.strip()
+                if self._is_valid_pssh(pssh_val, drm_type):
+                    pssh_list.append(pssh_val)
+            
+            # Check for playready pro
+            if drm_type == DRMSystem.PLAYREADY:
+                pro_elem = self._find(cp, 'mspr:pro')
+                if pro_elem is not None and pro_elem.text and pro_elem.text.strip():
+                    pro_val = pro_elem.text.strip()
+                    if self._is_valid_pro(pro_val):
+                        pssh_list.append(pro_val)
+            
+            if pssh_list:
+                drm_data.setdefault(drm_type, []).extend(pssh_list)
+        
+        return drm_data
+
+    def _get_drm_types(self, element: ET.Element) -> List[str]:
+        """Extract DRM types from element."""
+        return list(self._get_drm_data(element).keys())
     
     def _has_pssh_data(self, cp_element: ET.Element, drm_type: str) -> bool:
         """Check if element has valid PSSH data."""
@@ -272,8 +295,18 @@ class MPDParser:
         """Extract detailed information from adaptation set."""
         # Get DRM info
         default_kid = self._get_default_kid(adapt_set)
-        drm_types = self._get_drm_types(adapt_set)
         
+        # Combine PSSH data from AdaptationSet and its Representations
+        pssh_map = self._get_drm_data(adapt_set)
+        for rep in self._findall(adapt_set, 'mpd:Representation'):
+            rep_pssh = self._get_drm_data(rep)
+            for drm_type, psshs in rep_pssh.items():
+                pssh_map.setdefault(drm_type, []).extend(psshs)
+        
+        # Deduplicate PSSHs
+        for drm_type in pssh_map:
+            pssh_map[drm_type] = list(dict.fromkeys(pssh_map[drm_type]))
+
         # Get resolution for video
         height = None
         if content_type == 'video':
@@ -284,8 +317,9 @@ class MPDParser:
             'content_type': content_type,
             'language': lang,
             'default_kid': default_kid,
-            'drm_types': drm_types,
-            'is_protected': self._is_protected(adapt_set),
+            'drm_types': list(pssh_map.keys()),
+            'pssh_map': pssh_map,
+            'is_protected': self._is_protected(adapt_set) or bool(pssh_map),
             'height': height
         }
     
@@ -365,8 +399,19 @@ class MPDParser:
         adapt_sets_info = self.get_adaptation_sets_info(target_ids, target_kids, target_langs, target_periods)
         
         for info in adapt_sets_info:
-            if info['default_kid']:
-                # Extract PSSH from root with this KID
+            pssh_map = info.get('pssh_map', {})
+            if drm_type in pssh_map:
+                for pssh in pssh_map[drm_type]:
+                    if pssh not in observed:
+                        observed.add(pssh)
+                        pssh_list.append({
+                            'pssh': pssh,
+                            'kid': info.get('default_kid') or 'N/A',
+                            'type': drm_type
+                        })
+            
+            # Fallback for kids if not in map
+            elif info.get('default_kid'):
                 pssh_items = self._find_pssh_by_kid(info['default_kid'], drm_type)
                 for pssh_item in pssh_items:
                     if pssh_item['pssh'] not in observed:

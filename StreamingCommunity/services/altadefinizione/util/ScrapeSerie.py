@@ -38,6 +38,93 @@ class GetSerieInfo:
         else:
             self.series_name = "Unknown Series"
 
+        # Try new structure first (dropdown-based)
+        series_select = soup.find('div', class_='series-select')
+        if series_select:
+            self._parse_dropdown_structure(series_select)
+        else:
+            # Fallback to old structure (tabs-based)
+            self._parse_tabs_structure(soup)
+
+    def _parse_dropdown_structure(self, series_select) -> None:
+        """
+        Parse the new dropdown-based structure.
+        """
+        # Find all season dropdowns
+        season_dropdown = series_select.find('div', class_='dropdown seasons')
+        if not season_dropdown:
+            logging.warning("Season dropdown not found")
+            return
+            
+        season_items = season_dropdown.find_all('span', {'data-season': True})
+        
+        for season_item in season_items:
+            try:
+                season_num = int(season_item.get('data-season'))
+                season_name = season_item.get_text(strip=True)
+                
+                # Create a new season
+                current_season = self.seasons_manager.add_season({
+                    'number': season_num,
+                    'name': season_name
+                })
+                
+                # Find episode dropdown for this season
+                episode_dropdown = series_select.find('div', class_='dropdown episodes', attrs={'data-season': str(season_num)})
+                if not episode_dropdown:
+                    logging.warning(f"Episode dropdown for season {season_num} not found")
+                    continue
+                
+                episode_items = episode_dropdown.find_all('span', {'data-episode': True})
+                
+                for ep_item in episode_items:
+                    try:
+                        data_episode = ep_item.get('data-episode')  # format: "1-1", "1-2", etc.
+                        if not data_episode:
+                            continue
+                        
+                        # Parse episode number
+                        parts = data_episode.split('-')
+                        if len(parts) != 2:
+                            continue
+                        
+                        ep_num = int(parts[1])
+                        ep_title = ep_item.get_text(strip=True)
+                        
+                        # Find corresponding mirrors dropdown
+                        mirrors_dropdown = series_select.find('div', class_='dropdown mirrors', attrs={'data-season': str(season_num), 'data-episode': data_episode})
+                        
+                        supervideo_url = None
+                        if mirrors_dropdown:
+                            mirror_links = mirrors_dropdown.find_all('span', {'data-link': True})
+                            for mirror in mirror_links:
+                                link = mirror.get('data-link', '').strip()
+                                if 'supervideo' in link:
+                                    supervideo_url = link
+                                    break
+                        
+                        # Add episode if supervideo link is available
+                        if supervideo_url and current_season:
+                            current_season.episodes.add({
+                                'number': ep_num,
+                                'name': ep_title,
+                                'url': supervideo_url
+                            })
+                        else:
+                            logging.warning(f"Supervideo link not available for Season {season_num}, Episode {ep_num}")
+                            
+                    except Exception as e:
+                        logging.error(f"Error parsing episode: {e}")
+                        continue
+                        
+            except Exception as e:
+                logging.error(f"Error parsing season: {e}")
+                continue
+
+    def _parse_tabs_structure(self, soup) -> None:
+        """
+        Parse the old tabs-based structure.
+        """
         # Find the tabs holder
         tabs_holder = soup.find('div', id='tabs_holder')
         if not tabs_holder:
