@@ -10,7 +10,7 @@ from rich.prompt import Prompt
 
 
 # Internal utilities
-from StreamingCommunity.utils import os_manager, start_message
+from StreamingCommunity.utils import os_manager, config_manager, start_message
 from StreamingCommunity.services._base import site_constants, MediaItem
 from StreamingCommunity.services._base.episode_manager import manage_selection, dynamic_format_number
 from StreamingCommunity.core.downloader import MP4_Downloader, HLS_Downloader
@@ -24,8 +24,9 @@ from .util.ScrapeSerie import ScrapeSerieAnime
 # Variable
 console = Console()
 msg = Prompt()
+extension_output = config_manager.config.get("M3U8_CONVERSION", "extension")
 KILL_HANDLER = False
-DOWNOAD_HLS = False
+DOWNOAD_HLS = True
 
 
 def download_episode(index_select: int, scrape_serie: ScrapeSerieAnime, video_source: VideoSourceAnime) -> Tuple[str,bool]:
@@ -49,7 +50,7 @@ def download_episode(index_select: int, scrape_serie: ScrapeSerieAnime, video_so
     video_source.get_embed(obj_episode.id, not DOWNOAD_HLS)
 
     # Create output path
-    mp4_name = f"{scrape_serie.series_name}_EP_{dynamic_format_number(str(obj_episode.number))}.mp4"
+    mp4_name = f"{scrape_serie.series_name}_EP_{dynamic_format_number(str(obj_episode.number))}"
 
     if scrape_serie.is_series:
         mp4_path = os_manager.get_sanitize_path(os.path.join(site_constants.ANIME_FOLDER, scrape_serie.series_name))
@@ -63,14 +64,14 @@ def download_episode(index_select: int, scrape_serie: ScrapeSerieAnime, video_so
     if not DOWNOAD_HLS:
         path, kill_handler = MP4_Downloader(
             url=str(video_source.src_mp4).strip(),
-            path=os.path.join(mp4_path, mp4_name)
+            path=os.path.join(mp4_path, f"{mp4_name}.mp4")
         )
         return path, kill_handler
     
     else:
         path, kill_handler = HLS_Downloader(
             m3u8_url=video_source.master_playlist,
-            output_path=os.path.join(mp4_path, mp4_name)
+            output_path=os.path.join(mp4_path, f"{mp4_name}.{extension_output}")
         ).start()
         return path, kill_handler
 

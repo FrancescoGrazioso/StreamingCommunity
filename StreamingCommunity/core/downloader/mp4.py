@@ -108,12 +108,17 @@ def MP4_Downloader(url: str, path: str, referer: str = None, headers_: dict = No
     with create_client() as client:
         with client.stream("GET", url, headers=headers) as response:
             response.raise_for_status()
-            total = int(response.headers.get('content-length', 0))
-            
-            if total == 0:
-                console.print("[red]No video stream found.")
-                return None, False
 
+            # Respect content-length when provided; otherwise treat as unknown (streaming/chunked)
+            content_length = response.headers.get('content-length')
+            try:
+                total = int(content_length) if content_length is not None else None
+            except Exception:
+                total = None
+
+            if total is None:
+                console.print("[yellow]No Content-Length received; streaming until peer closes connection.")
+ 
             # Create progress bar with Rich
             progress_bars = Progress(
                 TextColumn("[yellow]MP4[/yellow] [cyan]Downloading[/cyan]: "),
@@ -127,52 +132,49 @@ def MP4_Downloader(url: str, path: str, referer: str = None, headers_: dict = No
             
             start_time = time.time()
             downloaded = 0
+            incomplete_error = False
             
             with progress_bars:
-                total_size_value, total_size_unit = internet_manager.format_file_size(total).split(" ")
-                
-                task_id = progress_bars.add_task(
-                    "download",
-                    total=total,
-                    downloaded="0.00",
-                    downloaded_unit="B",
-                    total_size=total_size_value,
-                    total_unit=total_size_unit,
-                    elapsed="0s",
-                    eta="--",
-                    speed="-- B/s"
-                )
-                
+                if total:
+                    total_size_value, total_size_unit = internet_manager.format_file_size(total).split(" ")
+                    task_total = total
+                else:
+                    total_size_value, total_size_unit = "--", ""
+                    task_total = None
+
+                task_id = progress_bars.add_task("download", total=task_total, downloaded="0.00", downloaded_unit="B", total_size=total_size_value, total_unit=total_size_unit, elapsed="0s", eta="--", speed="-- B/s")
                 with open(temp_path, 'wb') as file:
                     try:
                         for chunk in response.iter_bytes(chunk_size=65536):
                             if interrupt_handler.force_quit:
                                 console.print("\n[red]Force quitting... Saving partial download.")
                                 break
-                            
+
                             if chunk:
                                 size = file.write(chunk)
                                 downloaded += size
-                                
+
                                 # Calculate stats
                                 elapsed = time.time() - start_time
                                 elapsed_str = internet_manager.format_time(elapsed)
-                                
-                                # Calculate speed and ETA
+
+                                # Calculate speed and ETA (only if total known)
                                 if elapsed > 0:
                                     speed = downloaded / elapsed
                                     speed_str = internet_manager.format_transfer_speed(speed)
-                                    
-                                    remaining_bytes = total - downloaded
-                                    eta_seconds = remaining_bytes / speed if speed > 0 else 0
-                                    eta_str = internet_manager.format_time(eta_seconds)
                                 else:
                                     speed_str = "-- B/s"
+
+                                if total:
+                                    remaining_bytes = max(total - downloaded, 0)
+                                    eta_seconds = remaining_bytes / speed if (elapsed > 0 and speed > 0) else 0
+                                    eta_str = internet_manager.format_time(eta_seconds)
+                                else:
                                     eta_str = "--"
-                                
+
                                 # Format downloaded size
                                 downloaded_value, downloaded_unit = internet_manager.format_file_size(downloaded).split(" ")
-                                
+
                                 # Update progress
                                 progress_bars.update(
                                     task_id,
@@ -184,19 +186,26 @@ def MP4_Downloader(url: str, path: str, referer: str = None, headers_: dict = No
                                     speed=speed_str
                                 )
 
-                    except KeyboardInterrupt:
+                    except (KeyboardInterrupt):
                         if not interrupt_handler.force_quit:
                             interrupt_handler.kill_download = True
+                    except Exception as e:
+                        incomplete_error = True
+                        interrupt_handler.kill_download = True
+                        console.print(f"\n[red]Download error: {e}. Saving partial download.")
                 
     if os.path.exists(temp_path):
         os.rename(temp_path, path)
-
+ 
     if os.path.exists(path):
         if show_final_info:
             file_size = internet_manager.format_file_size(os.path.getsize(path))
             console.print("\n[green]Output:")
             console.print(f"  [cyan]Path: [red]{os.path.abspath(path)}")
             console.print(f"  [cyan]Size: [red]{file_size}")
+
+            if incomplete_error or (total and os.path.getsize(path) < total):
+                console.print("[yellow]Warning: download was incomplete (partial file saved).")
 
         return path, interrupt_handler.kill_download
     

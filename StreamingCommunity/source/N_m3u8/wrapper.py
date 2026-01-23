@@ -189,7 +189,7 @@ class MediaDownloader:
                 has_video = any(s.type == "Video" for s in self.streams)
                 video_selected = any(s.type == "Video" and s.selected for s in self.streams)
                 if has_video and not video_selected:
-                    console.log("[yellow]No video matched select_video filter; forcing 'best' for download[/yellow]")
+                    console.print("[yellow]No video matched select_video filter; forcing 'best' for download[/yellow]")
                     self.force_best_video = True
             except Exception:
                 self.force_best_video = False
