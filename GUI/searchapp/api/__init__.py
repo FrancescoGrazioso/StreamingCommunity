@@ -8,18 +8,14 @@ from .base import BaseStreamingAPI
 # Import APi
 from .streamingcommunity import StreamingCommunityAPI
 from .animeunity import AnimeUnityAPI
-from .altadefinizione import AltaDefinizioneAPI
 from .raiplay import RaiPlayAPI
 from .mediasetinfinity import MediasetInfinityAPI
-from .tubitv import TubiTVAPI
 
 _API_REGISTRY: Dict[str, type] = {
     'streamingcommunity': StreamingCommunityAPI,
     'animeunity': AnimeUnityAPI,
-    'altadefinizione': AltaDefinizioneAPI,
     'raiplay': RaiPlayAPI,
-    'mediasetinfinity': MediasetInfinityAPI,
-    'tubitv': TubiTVAPI
+    'mediasetinfinity': MediasetInfinityAPI
 }
 
 

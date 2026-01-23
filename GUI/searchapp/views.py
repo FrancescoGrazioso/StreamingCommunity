@@ -1,6 +1,7 @@
 # 06-06-25 By @FrancescoGrazioso -> "https://github.com/FrancescoGrazioso"
 
 
+import time
 import json
 import threading
 from datetime import datetime
@@ -18,6 +19,10 @@ from django.contrib import messages
 from .forms import SearchForm, DownloadForm
 from GUI.searchapp.api import get_api
 from GUI.searchapp.api.base import MediaItem
+
+
+# CLI utilities
+from StreamingCommunity.utils.tracker import download_tracker, context_tracker
 
 
 def _media_item_to_display_dict(item: MediaItem, source_alias: str) -> Dict[str, Any]:
@@ -94,16 +99,32 @@ def search(request: HttpRequest) -> HttpResponse:
         "searchapp/results.html",
         {
             "form": SearchForm(initial={"site": site, "query": query}),
+            "query": query, # Explicitly pass query
             "download_form": download_form,
             "results": results,
         },
     )
 
 
-def _run_download_in_thread(site: str, item_payload: Dict[str, Any], season: str = None, episodes: str = None) -> None:
+def _run_download_in_thread(site: str, item_payload: Dict[str, Any], season: str = None, episodes: str = None, media_type: str = "Film") -> None:
     """Run download in background thread."""
+    name = item_payload.get('name', 'Unknown')
+    if season and episodes:
+        title = f"{name} - S{season} E{episodes}"
+    elif season:
+        title = f"{name} - S{season}"
+    else:
+        title = name
+        
+    download_id = f"{site}_{int(time.time())}_{hash(title) % 10000}"
+    
     def _task():
         try:
+            # Set context for downloaders in this thread
+            context_tracker.download_id = download_id
+            context_tracker.site_name = site
+            context_tracker.media_type = media_type
+            
             api = get_api(site)
             
             # Ensure complete item
@@ -213,7 +234,7 @@ def start_download(request: HttpRequest) -> HttpResponse:
         episode = "*"
 
     # Start download in background
-    _run_download_in_thread(site, item_payload, season, episode)
+    _run_download_in_thread(site, item_payload, season, episode, media_type)
 
     # Success message
     season_info = ""
@@ -324,3 +345,30 @@ def series_detail(request: HttpRequest) -> HttpResponse:
         )
         
         return redirect("search_home")
+
+
+@require_http_methods(["GET"])
+def download_dashboard(request: HttpRequest) -> HttpResponse:
+    """Dashboard to view all active and completed downloads."""
+    active_downloads = download_tracker.get_active_downloads()
+    history = download_tracker.get_history()
+    
+    return render(
+        request, 
+        "searchapp/downloads.html", 
+        {
+            "active_downloads": active_downloads,
+            "history": history
+        }
+    )
+
+
+def get_downloads_json(request: HttpRequest) -> JsonResponse:
+    """API endpoint to get real-time download progress."""
+    active_downloads = download_tracker.get_active_downloads()
+    history = download_tracker.get_history()
+    
+    return JsonResponse({
+        "active": active_downloads,
+        "history": history
+    })

@@ -14,6 +14,7 @@ from rich.console import Console
 
 # Internal utilities
 from StreamingCommunity.utils.http_client import get_headers
+from StreamingCommunity.utils.tracker import context_tracker
 from StreamingCommunity.core.processors import join_video, join_audios, join_subtitles
 from StreamingCommunity.core.downloader.media_players import MediaPlayers
 from StreamingCommunity.utils import config_manager, os_manager, internet_manager
@@ -52,6 +53,10 @@ class DASH_Downloader:
         self.key = key
         self.cookies = cookies or {}
         self.decrypt_preference = decrypt_preference.lower()
+        
+        # Tracking IDs - check context if not provided
+        self.download_id = context_tracker.download_id
+        self.site_name = context_tracker.site_name
         self.raw_mpd_path = None
         
         # Setup output path
@@ -308,7 +313,9 @@ class DASH_Downloader:
             filename=self.filename_base,
             headers=self.mpd_headers,
             cookies=self.cookies,
-            decrypt_preference=self.decrypt_preference
+            decrypt_preference=self.decrypt_preference,
+            download_id=self.download_id,
+            site_name=self.site_name
         )
         
         if self.mpd_sub_list:

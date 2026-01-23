@@ -1,232 +1,156 @@
-<!DOCTYPE html>
-<html lang="it" class="dark">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>StreamingCommunity - Ricerca</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          animation: {
-            'fade-in': 'fadeIn 0.5s ease-in-out',
-            'slide-up': 'slideUp 0.3s ease-out',
-            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-          },
-          keyframes: {
-            fadeIn: {
-              '0%': { opacity: '0' },
-              '100%': { opacity: '1' },
-            },
-            slideUp: {
-              '0%': { transform: 'translateY(10px)', opacity: '0' },
-              '100%': { transform: 'translateY(0)', opacity: '1' },
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    body { font-family: 'Inter', sans-serif; }
-  </style>
-  {% csrf_token %}
-</head>
-<body class="bg-gray-900 min-h-screen text-gray-100">
-  <!-- Background Pattern -->
-  <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%236B7280" fill-opacity="0.03"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+{% extends "searchapp/base.html" %}
 
-  <div class="relative z-10 container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="text-center mb-12 animate-fade-in">
-      <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-6 shadow-lg">
-        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-        </svg>
-      </div>
-      <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">
-        StreamingCommunity
-      </h1>
-      <p class="text-gray-400 text-lg max-w-2xl mx-auto">
-        Trova e scarica i tuoi contenuti preferiti da tutti i siti di streaming
-      </p>
+{% block content %}
+<div class="w-full max-w-7xl mx-auto animate-fade-in pt-8">
+    <!-- Hero / Intro -->
+    <div class="mb-16">
+        <h2 class="text-xs font-black uppercase tracking-[0.5em] text-blue-500 mb-4 opacity-70">Lavorazione Streaming Globale</h2>
+        <h1 class="text-5xl sm:text-7xl font-black text-white leading-[1.1] tracking-tighter max-w-4xl">
+            Tutto ciò che ami, <br>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-blue-600">in un unico posto.</span>
+        </h1>
     </div>
 
-    <!-- Messages -->
-    {% if messages %}
-      <div class="max-w-2xl mx-auto mb-8 space-y-4 animate-slide-up">
-        {% for message in messages %}
-          <div class="flex items-center p-4 rounded-xl border {% if message.tags == 'success' %}bg-green-900/50 border-green-700 text-green-300{% elif message.tags == 'error' %}bg-red-900/50 border-red-700 text-red-300{% else %}bg-blue-900/50 border-blue-700 text-blue-300{% endif %}">
-            <div class="flex-shrink-0 mr-3">
-              {% if message.tags == 'success' %}
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                </svg>
-              {% elif message.tags == 'error' %}
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                </svg>
-              {% else %}
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
-                </svg>
-              {% endif %}
-            </div>
-            <span class="text-sm font-medium">{{ message }}</span>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
+    <!-- Linux-Style Command Search (Keyword First, then Source) -->
+    <div class="relative group mb-24">
+        <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+        <div class="relative bg-gray-900/40 backdrop-blur-3xl border border-white/5 rounded-[2rem] p-4 shadow-2xl overflow-hidden">
+            <!-- Background Accent -->
+            <div class="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
-    <!-- Search Form -->
-    <div class="max-w-2xl mx-auto animate-slide-up">
-      <div class="bg-gray-800 border border-gray-700 rounded-2xl p-8 shadow-2xl">
-        <form action="{% url 'search' %}" method="post" class="space-y-6">
-          {% csrf_token %}
-          
-          <!-- Site Selection -->
-          <div>
-            <label for="id_site" class="block text-sm font-semibold text-gray-200 mb-3">
-              <svg class="inline w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"></path>
-              </svg>
-              Seleziona Sito
-            </label>
-            <div class="relative group">
-              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <svg class="w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                </svg>
-              </div>
-              {{ form.site }}
-              <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                <svg class="w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <!-- Search Query -->
-          <div>
-            <label for="id_query" class="block text-sm font-semibold text-gray-200 mb-3">
-              <svg class="inline w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-              </svg>
-              Cosa cerchi?
-            </label>
-            <div class="relative group">
-              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <svg class="w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-              </div>
-              {{ form.query }}
-              <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                  <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                  </svg>
+            <form action="{% url 'search' %}" method="post" class="relative z-10 flex flex-col lg:flex-row items-stretch gap-4">
+                {% csrf_token %}
+                
+                <!-- Keyword Input (Primary Focus) -->
+                <div class="relative flex-1 group/input">
+                    <div class="absolute inset-y-0 left-6 flex items-center pointer-events-none">
+                        <svg class="w-6 h-6 text-gray-500 group-focus-within/input:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <input type="text" name="query" id="id_query" required placeholder="Inserisci titolo..." 
+                           class="w-full h-20 bg-white/5 border border-white/5 rounded-2xl pl-16 pr-6 text-xl font-bold text-white placeholder-gray-500 focus:bg-white/10 focus:ring-4 focus:ring-blue-500/20 transition-all outline-none">
                 </div>
-              </div>
-            </div>
-          </div>
 
-          <!-- Submit Button -->
-          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-500/50">
-            <svg class="inline w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
-            Cerca Contenuti
-          </button>
-        </form>
-      </div>
+                <!-- Provider Selector -->
+                <div class="relative w-full lg:w-96 group/select">
+                    <div class="absolute inset-y-0 left-6 flex items-center pointer-events-none z-20">
+                        <svg class="w-5 h-5 text-gray-500 group-focus-within/select:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1-4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    {{ form.site }}
+                    <div class="absolute inset-y-0 right-6 flex items-center pointer-events-none">
+                        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                </div>
 
-      <!-- Features -->
-      <div class="mt-12 grid md:grid-cols-3 gap-6">
-        <div class="text-center p-6 bg-gray-800 border border-gray-700 rounded-xl">
-          <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-            </svg>
-          </div>
-          <h3 class="font-semibold text-white mb-2">Veloce</h3>
-          <p class="text-sm text-gray-400">Ricerca istantanea su tutti i siti</p>
+                <!-- Hidden Submit (Press Enter to search) -->
+                <button type="submit" class="hidden"></button>
+            </form>
         </div>
-        
-        <div class="text-center p-6 bg-gray-800 border border-gray-700 rounded-xl">
-          <div class="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-          <h3 class="font-semibold text-white mb-2">Sicuro</h3>
-          <p class="text-sm text-gray-400">Download sicuro e protetto</p>
-        </div>
-        
-        <div class="text-center p-6 bg-gray-800 border border-gray-700 rounded-xl">
-          <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-            </svg>
-          </div>
-          <h3 class="font-semibold text-white mb-2">Completo</h3>
-          <p class="text-sm text-gray-400">Film, serie TV e anime</p>
-        </div>
-      </div>
     </div>
-  </div>
+</div>
 
-  <style>
-    /* Custom form styling */
-    /* Rimosse regole generiche che potevano sovrascrivere i widget del form */
+<style>
+    /* Targeting Django form widget IDs */
+    #id_site {
+        appearance: none;
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        width: 100% !important;
+        height: 5rem !important; /* matches h-20 */
+        padding-left: 4.5rem !important;
+        padding-right: 3.5rem !important;
+        border-radius: 1rem !important;
+        color: white !important;
+        font-weight: 700 !important;
+        font-size: 1.1rem !important;
+        outline: none !important;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    #id_site:focus {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        border-color: rgba(59, 130, 246, 0.3) !important;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1) !important;
+    }
+    #id_site option {
+        background-color: #0f172a;
+        color: white;
+        padding: 1rem;
+    }
+</style>
+{% endblock %}
 
-    /* Override specifico per i campi del form */
+    <!-- Main Search Card -->
+    <div class="bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-3xl p-8 shadow-2xl">
+        <form action="{% url 'search' %}" method="post" class="space-y-6">
+            {% csrf_token %}
+            
+            <div class="space-y-4">
+                <!-- Site Selection -->
+                <div class="relative group">
+                    <label class="block text-sm font-medium text-gray-400 mb-2 ml-1">Sorgente Streaming</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+                            <svg class="w-5 h-5 text-gray-500 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                            </svg>
+                        </div>
+                        {{ form.site }}
+                    </div>
+                </div>
+
+                <!-- Query Input -->
+                <div class="relative group">
+                    <label class="block text-sm font-medium text-gray-400 mb-2 ml-1">Cerca Titolo</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+                            <svg class="w-5 h-5 text-gray-500 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        {{ form.query }}
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-600/20 flex items-center justify-center group text-lg">
+                Cerca ora
+                <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7"></path>
+                </svg>
+            </button>
+        </form>
+    </div>
+
+    <!-- Quick Tips -->
+    <div class="mt-8 grid grid-cols-3 gap-4">
+        <div class="p-4 bg-gray-800/30 rounded-2xl border border-gray-700/50 text-center">
+            <div class="text-blue-500 mb-1">
+                <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Veloce</div>
+        </div>
+        <div class="p-4 bg-gray-800/30 rounded-2xl border border-gray-700/50 text-center">
+            <div class="text-blue-500 mb-1">
+                <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Sicuro</div>
+        </div>
+        <div class="p-4 bg-gray-800/30 rounded-2xl border border-gray-700/50 text-center">
+            <div class="text-blue-500 mb-1">
+                <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Multi-sito</div>
+        </div>
+    </div>
+</div>
+
+<style>
     #id_site, #id_query {
-      background-color: #ffffff !important; /* sfondo bianco */
-      color: #111827 !important;            /* testo quasi nero */
-      border-color: #d1d5db !important;     /* grigio chiaro */
-      padding-left: 3rem;                    /* spazio per icone */
-      padding-right: 3rem;                   /* spazio per icone */
+        @apply w-full bg-white text-gray-900 rounded-2xl py-4 pl-12 pr-4 border-none shadow-inner transition-all focus:ring-4 focus:ring-blue-500/20 text-lg font-medium;
     }
-    
-    /* Specific styling for select */
-    select {
-      @apply py-3 px-12; /* Padding per le icone laterali */
-      background-image: none !important; /* Rimuove la freccia di default */
-      color: #111827 !important; /* Fix: opzione selezionata visibile in dark */
-    }
-    
-    /* Specific styling for input */
-    input {
-      @apply py-3 px-12; /* Padding per le icone laterali */
-    }
-    
-    select option {
-      @apply bg-gray-700 text-white;
-      background-color: #374151 !important;
-      color: white !important;
-    }
-    
-    /* Hover effects */
-    select:hover, input:hover {
-      @apply border-gray-500;
-    }
-    
-    /* Focus effects */
-    select:focus, input:focus {
-      @apply border-blue-500 ring-2 ring-blue-500/20;
-    }
-    
-    /* Smooth scrolling */
-    html {
-      scroll-behavior: smooth;
-    }
-  </style>
-</body>
-</html>
-
-
+    select { appearance: none; }
+</style>

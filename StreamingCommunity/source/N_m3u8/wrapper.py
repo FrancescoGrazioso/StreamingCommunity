@@ -19,6 +19,7 @@ from rich.progress import Progress, TextColumn
 from StreamingCommunity.utils.config import config_manager
 from StreamingCommunity.utils import internet_manager
 from StreamingCommunity.setup import get_ffmpeg_path, get_n_m3u8dl_re_path, get_bento4_decrypt_path, get_shaka_packager_path
+from StreamingCommunity.utils.tracker import download_tracker
 
 
 # Logic
@@ -46,7 +47,7 @@ CONF_PROXY = config_manager.config.get_dict("REQUESTS", "proxy") or {}
 
 
 class MediaDownloader:
-    def __init__(self, url: str, output_dir: str, filename: str, headers: Optional[Dict] = None, key: Optional[str] = None, cookies: Optional[Dict] = None, decrypt_preference: str = "bento4"):
+    def __init__(self, url: str, output_dir: str, filename: str, headers: Optional[Dict] = None, key: Optional[str] = None, cookies: Optional[Dict] = None, decrypt_preference: str = "bento4", download_id: str = None, site_name: str = None):
         self.url = url
         self.output_dir = Path(output_dir)
         self.filename = filename
@@ -54,6 +55,16 @@ class MediaDownloader:
         self.key = key
         self.cookies = cookies or {}
         self.decrypt_preference = decrypt_preference.lower()
+        self.download_id = download_id
+        self.site_name = site_name
+
+        # Track in GUI if ID is provided
+        if self.download_id:
+            download_tracker.start_download(
+                self.download_id, 
+                self.filename, 
+                self.site_name or "Unknown"
+            )
 
         # Initialize other attributes
         self.streams = []
@@ -397,6 +408,12 @@ class MediaDownloader:
                     proc.wait()
         
         self.status = self._get_download_status(subtitle_sizes, external_subs)
+
+        # Mark completion in tracker
+        if self.download_id:
+            success = self.status.get('video') is not None or len(self.status.get('audios', [])) > 0
+            download_tracker.complete_download(self.download_id, success=success)
+
         return self.status
 
     def _update_task(self, progress, tasks: dict, key: str, label: str, line: str):
@@ -408,24 +425,44 @@ class MediaDownloader:
             )
         task = tasks[key]
 
+        cur_segment = None
+        cur_percent = None
+        cur_speed = None
+        cur_size = None
+
         # 1) Update segments
         if m := SEGMENT_RE.search(line): 
-            progress.update(task, segment=m.group(0))
+            cur_segment = m.group(0)
+            progress.update(task, segment=cur_segment)
 
         # 2) Update percentage
         if m := PERCENT_RE.search(line): 
             try: 
-                progress.update(task, completed=float(m.group(1)))
+                cur_percent = float(m.group(1))
+                progress.update(task, completed=cur_percent)
             except Exception:  
                 pass
 
         # 3) Update speed
         if m := SPEED_RE.search(line): 
-            progress.update(task, speed=m.group(1))
+            cur_speed = m.group(1)
+            progress.update(task, speed=cur_speed)
 
         # 4) Update size
         if m := SIZE_RE.search(line): 
-            progress.update(task, size=f"{m.group(1)}/{m.group(2)}")
+            cur_size = f"{m.group(1)}/{m.group(2)}"
+            progress.update(task, size=cur_size)
+
+        # Update global tracker with the values parsed from the current line
+        if self.download_id:
+            download_tracker.update_progress(
+                self.download_id,
+                key,
+                cur_percent,
+                cur_speed,
+                cur_size,
+                cur_segment
+            )
         
         return task
 

@@ -1,0 +1,257 @@
+{% extends "searchapp/base.html" %}
+
+{% block content %}
+<div class="w-full animate-fade-in">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+        <div>
+            <p class="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 opacity-80 mb-2">Monitor di Sistema</p>
+            <h1 class="text-4xl font-black text-white tracking-tighter">Status Download</h1>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <button onclick="window.history.back()" class="h-12 px-6 bg-gray-900 border border-white/5 hover:border-white/10 text-gray-400 hover:text-white rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all">
+                Indietro
+            </button>
+            <a href="{% url 'search_home' %}" class="h-12 px-6 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-xl shadow-blue-600/20">
+                Nuova Ricerca
+            </a>
+        </div>
+    </div>
+
+    <!-- Active Downloads Section -->
+    <div class="mb-16">
+        <div class="flex items-center gap-3 mb-8">
+            <div class="flex h-3 w-3 relative">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </div>
+            <h2 class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Canali Attivi</h2>
+        </div>
+
+        <div id="active-downloads-container" class="space-y-4">
+            <!-- Table Header for Active -->
+            <div class="hidden lg:grid grid-cols-12 gap-4 px-8 py-4 bg-white/5 rounded-t-2xl border-x border-t border-white/5 text-[10px] font-black uppercase tracking-widest text-gray-400 shadow-sm">
+                <div class="col-span-6 pl-2">Titolo / Sorgente</div>
+                <div class="col-span-1 text-center">Tipo</div>
+                <div class="col-span-1 text-center">Avanz.</div>
+                <div class="col-span-2 text-center">Peso / Tempo</div>
+                <div class="col-span-2 text-right">Banda / Rate</div>
+            </div>
+
+            <div id="no-active-downloads" class="bg-gray-900/40 border border-dashed border-white/5 rounded-[2rem] p-16 text-center animate-fade-in">
+                <p class="text-gray-600 font-bold uppercase tracking-widest text-[10px]">Nessun download in corso</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- History -->
+    <div>
+        <h2 class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-8 ml-2">Archivio Recenti</h2>
+        <div class="bg-gray-900/40 border border-white/5 rounded-[2rem] overflow-hidden backdrop-blur-3xl">
+            <table class="w-full text-left">
+                <thead class="bg-white/5 text-[9px] font-black uppercase tracking-widest text-gray-400">
+                    <tr>
+                        <th class="px-8 py-5">Contenuto</th>
+                        <th class="px-8 py-5 text-center">Esito</th>
+                        <th class="px-8 py-5 text-right">Completato</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body" class="divide-y divide-white/5">
+                    <tr>
+                        <td colspan="3" class="px-8 py-12 text-center text-gray-600 font-bold text-[10px] uppercase tracking-widest italic opacity-50">In caricamento...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .progress-glow {
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        updateProgress();
+        setInterval(updateProgress, 2000);
+    });
+    
+    async function updateProgress() {
+        try {
+            const response = await fetch('{% url "get_downloads_json" %}');
+            const data = await response.json();
+            renderActiveDownloads(data.active);
+            renderHistory(data.history);
+        } catch (error) {
+            console.error('Update fail:', error);
+        }
+    }
+
+    function renderActiveDownloads(downloads) {
+        const container = document.getElementById('active-downloads-container');
+        const noDownloads = document.getElementById('no-active-downloads');
+        
+        // Track expanded states
+        if (!window.expandedRows) window.expandedRows = new Set();
+        
+        // Remove old cards that are no longer active
+        const activeIds = new Set(downloads.map(dl => dl.id));
+        container.querySelectorAll('.download-row').forEach(row => {
+            if (!activeIds.has(row.dataset.id)) row.remove();
+        });
+
+        if (downloads.length === 0) {
+            noDownloads.style.display = 'block';
+        } else {
+            noDownloads.style.display = 'none';
+            downloads.forEach(dl => {
+                let row = container.querySelector(`.download-row[data-id="${dl.id}"]`);
+                if (!row) {
+                    row = document.createElement('div');
+                    row.className = 'download-row bg-gray-900/60 border border-white/5 rounded-2xl p-6 lg:p-8 hover:bg-gray-800/60 transition-colors animate-slide-up group';
+                    row.dataset.id = dl.id;
+                    container.appendChild(row);
+                }
+                
+                const isExpanded = window.expandedRows.has(dl.id);
+                const rotation = isExpanded ? 'rotate-180' : 'rotate-0';
+                const displayClass = isExpanded ? 'block' : 'hidden';
+
+                // Infer type if not provided
+                const isSeries = dl.title.match(/[SE]\d+/i) || dl.title.includes(' - ');
+                const typeLabel = dl.type || (isSeries ? 'Serie' : 'Film');
+                const typeColor = isSeries ? 'text-indigo-400 bg-indigo-400/10' : 'text-blue-400 bg-blue-400/10';
+                
+                // Calculate elapsed time
+                const elapsedSec = Math.floor(Date.now() / 1000 - (dl.start_time || 0));
+                const timeStr = elapsedSec > 60 ? `${Math.floor(elapsedSec/60)}m ${elapsedSec%60}s` : `${elapsedSec}s`;
+
+                row.innerHTML = `
+                    <div class="grid grid-cols-1 lg:grid-cols-12 items-center gap-6 lg:gap-4">
+                        <!-- Info -->
+                        <div class="lg:col-span-5 min-w-0 flex items-center gap-4">
+                            <button onclick="toggleRow('${dl.id}')" class="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-all transform ${rotation}" id="btn-${dl.id}">
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </button>
+                            <div class="min-w-0">
+                                <h3 class="text-base font-black text-white truncate mb-1 group-hover:text-blue-400 transition-colors">${dl.title}</h3>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[9px] font-black text-gray-500 uppercase tracking-widest">${dl.site}</span>
+                                    <span class="w-1 h-1 bg-gray-700 rounded-full"></span>
+                                    <span class="text-[9px] font-bold text-blue-500/80 uppercase">${dl.status}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Type -->
+                        <div class="lg:col-span-1 flex justify-center">
+                            <span class="px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-tighter ${typeColor} border border-current opacity-70">
+                                ${typeLabel}
+                            </span>
+                        </div>
+
+                        <!-- Progress (Barra più corta) -->
+                        <div class="lg:col-span-2 px-4">
+                            <div class="flex items-center justify-between mb-1.5 px-1">
+                                <span class="text-xs font-black text-white font-mono">${dl.progress.toFixed(0)}%</span>
+                            </div>
+                            <div class="h-1.5 w-full bg-black/40 rounded-full overflow-hidden">
+                                <div class="h-full bg-blue-600 rounded-full transition-all duration-1000 progress-glow" style="width: ${dl.progress}%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Size & Time -->
+                        <div class="lg:col-span-2 text-center border-x border-white/5">
+                            <div class="text-sm font-black text-gray-200 font-mono mb-0.5">${dl.size.split('/')[1] || dl.size}</div>
+                            <div class="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">${timeStr} elap.</div>
+                        </div>
+
+                        <!-- Speed -->
+                        <div class="lg:col-span-2 text-right px-2">
+                            <div class="text-base font-black text-blue-500 font-mono leading-none mb-1">${dl.speed}</div>
+                            <div class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Velocità</div>
+                        </div>
+                    </div>
+                    <!-- Tasks Expansion -->
+                    <div class="mt-6 pt-6 border-t border-white/5 space-y-3 ${displayClass}" id="tasks-${dl.id}">
+                        <h4 class="text-[9px] font-black text-gray-600 uppercase tracking-[0.3em] mb-4 ml-2">Dettagli Flussi</h4>
+                        ${Object.entries(dl.tasks || {}).map(([name, task]) => `
+                            <div class="flex flex-col lg:flex-row lg:items-center gap-4 bg-black/20 p-3 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                                <div class="w-full lg:w-72 shrink-0 px-2">
+                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-wide py-1 px-2 bg-white/5 rounded-md block lg:inline-block truncate" title="${name}">
+                                        ${name.replace(/_/g, ' ')}
+                                    </span>
+                                </div>
+                                <div class="flex-1 max-w-sm px-2">
+                                    <div class="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                                        <div class="h-full bg-blue-500/40 rounded-full transition-all duration-1000" style="width: ${task.progress}%"></div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-end gap-10 text-right px-4">
+                                    <div class="min-w-[50px]">
+                                        <span class="text-[8px] block text-gray-600 uppercase font-black mb-0.5">Stato</span>
+                                        <span class="text-xs font-extrabold text-blue-400 font-mono">${task.progress.toFixed(1)}%</span>
+                                    </div>
+                                    <div class="min-w-[100px]">
+                                        <span class="text-[8px] block text-gray-600 uppercase font-black mb-0.5">Transfer</span>
+                                        <span class="text-xs font-bold text-gray-300 font-mono">${task.speed}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>                `;
+            });
+        }
+    }
+
+    function renderHistory(history) {
+        const body = document.getElementById('history-body');
+        if (history.length === 0) {
+            body.innerHTML = '<tr><td colspan="3" class="px-8 py-12 text-center text-gray-600 italic">Cronologia vuota</td></tr>';
+            return;
+        }
+
+        body.innerHTML = history.map(item => {
+            const date = new Date(item.end_time * 1000).toLocaleString();
+            const statusClass = item.status === 'completed' ? 'text-emerald-500 bg-emerald-500/10' : 'text-red-500 bg-red-500/10';
+            const statusLabel = item.status === 'completed' ? 'SUCCESSO' : 'FALLITO';
+            
+            return `
+                <tr class="hover:bg-white/[0.02] transition-colors">
+                    <td class="px-8 py-5">
+                        <div class="text-xs font-bold text-gray-200">${item.title}</div>
+                        <div class="text-[8px] font-black text-gray-600 uppercase tracking-widest mt-0.5">${item.site}</div>
+                    </td>
+                    <td class="px-8 py-5 text-center">
+                        <span class="px-2 py-1 rounded-md text-[8px] font-black tracking-widest ${statusClass}">
+                            ${statusLabel}
+                        </span>
+                    </td>
+                    <td class="px-8 py-5 text-right font-mono text-[9px] text-gray-500">
+                        ${date}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function toggleRow(id) {
+        if (!window.expandedRows) window.expandedRows = new Set();
+        if (window.expandedRows.has(id)) {
+            window.expandedRows.delete(id);
+        } else {
+            window.expandedRows.add(id);
+        }
+        
+        const btn = document.getElementById(`btn-${id}`);
+        const tasks = document.getElementById(`tasks-${id}`);
+        if (btn && tasks) {
+            btn.classList.toggle('rotate-180');
+            tasks.classList.toggle('hidden');
+        }
+    }
+</script>
+{% endblock %}

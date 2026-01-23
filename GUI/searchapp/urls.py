@@ -10,4 +10,6 @@ urlpatterns = [
     path("download/", views.start_download, name="start_download"),
     path("series-metadata/", views.series_metadata, name="series_metadata"),
     path("series-detail/", views.series_detail, name="series_detail"),
+    path("downloads/", views.download_dashboard, name="download_dashboard"),
+    path("api/get-downloads/", views.get_downloads_json, name="get_downloads_json"),
 ]

@@ -63,7 +63,7 @@ class GetSerieInfo:
                     'id': season_data.get('id', 0),
                     'number': season_data.get('number', 0),
                     'name': f"Season {season_data.get('number', 0)}",
-                    'slug': season_data.get('slug', ''),
+                    'slug': season_data.get('slug', '')
                 })
 
         except Exception as e:

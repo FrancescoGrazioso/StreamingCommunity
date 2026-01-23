@@ -1,77 +1,266 @@
-<!DOCTYPE html>
-<html lang="it" class="dark">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{{ title }} - Dettagli Serie</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          animation: {
-            'fade-in': 'fadeIn 0.5s ease-in-out',
-            'slide-up': 'slideUp 0.3s ease-out',
-          },
-          keyframes: {
-            fadeIn: {
-              '0%': { opacity: '0' },
-              '100%': { opacity: '1' },
-            },
-            slideUp: {
-              '0%': { transform: 'translateY(10px)', opacity: '0' },
-              '100%': { transform: 'translateY(0)', opacity: '1' },
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    body { font-family: 'Inter', sans-serif; }
-  </style>
-</head>
-<body class="bg-gray-900 min-h-screen text-gray-100">
-  <!-- Background Pattern -->
-  <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%236B7280" fill-opacity="0.03"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+{% extends "searchapp/base.html" %}
 
-  {% if bg_image_url %}
-  <!-- Hero Background -->
-  <div class="absolute top-0 left-0 right-0 h-96 bg-cover bg-center opacity-20" style="background-image: url('{{ bg_image_url }}'); filter: blur(8px);"></div>
-  <div class="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-transparent to-gray-900"></div>
-  {% endif %}
+{% block content %}
+<div class="w-full animate-fade-in">
+    <!-- Hero / Header -->
+    <div class="relative overflow-hidden rounded-[2.5rem] bg-gray-900 border border-white/5 mb-12 shadow-2xl">
+        {% if bg_image_url %}
+            <div class="absolute inset-0 opacity-20 blur-3xl scale-110" style="background-image: url('{{ bg_image_url }}'); background-size: cover; background-position: center;"></div>
+        {% endif %}
+        
+        <div class="relative z-10 p-8 md:p-16 flex flex-col md:flex-row items-center gap-10">
+            <!-- Back Button -->
+            <button onclick="window.history.back()" class="absolute top-8 left-8 p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all group z-20">
+                <svg class="w-5 h-5 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
 
-  <div class="relative z-10 container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="max-w-6xl mx-auto">
-      <!-- Back Button -->
-      <div class="mb-6 animate-fade-in">
-        <a href="{% url 'search_home' %}" class="inline-flex items-center text-gray-400 hover:text-white transition-colors">
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-          </svg>
-          Torna alla ricerca
-        </a>
-      </div>
-
-      <!-- Title Section -->
-      <div class="mb-8 animate-slide-up">
-        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-8 shadow-2xl">
-          <div class="flex items-center mb-4">
-            <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mr-4">
-              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path>
-              </svg>
+            <!-- Poster/Icon -->
+            <div class="w-32 h-44 bg-blue-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-600/20 shrink-0 transform -rotate-2">
+                <svg class="w-16 h-16 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
-            <div>
-              <h1 class="text-3xl font-bold text-white">{{ title }}</h1>
-              <p class="text-gray-400 mt-1">Seleziona stagione ed episodi da scaricare</p>
+
+            <div class="flex-1 text-center md:text-left">
+                <div class="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-4">
+                    <span class="px-3 py-1 bg-blue-600/20 text-blue-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-blue-500/20">Serie TV</span>
+                    <span class="px-3 py-1 bg-white/5 text-gray-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-white/5">{{ seasons|length }} Stagioni</span>
+                </div>
+                <h1 class="text-4xl md:text-6xl font-black text-white mb-4 tracking-tighter leading-tight">{{ title }}</h1>
+                <p class="text-gray-400 text-lg font-medium max-w-2xl leading-relaxed">Configura i download selezionando stagioni o singoli episodi. Tutti i file verranno salvati nella tua cartella dedicata.</p>
             </div>
-          </div>
         </div>
-      </div>
+    </div>
+
+    <!-- Manager UI -->
+    <div class="flex flex-col xl:flex-row gap-8">
+        <!-- Sidebar Selection (Dropdown Style for Mobile/Tablet, Vertical Menu for Desktop) -->
+        <div class="w-full xl:w-80 shrink-0">
+            <div class="sticky top-24 space-y-4">
+                <label class="block text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 mb-2">Seleziona Stagione</label>
+                
+                <!-- Native Select for Mobile -->
+                <div class="relative lg:hidden mb-6">
+                    <select id="season-selector-mobile" onchange="showSeason(this.value)" class="w-full h-14 bg-gray-900 border border-white/10 rounded-2xl px-6 text-white font-bold appearance-none">
+                        {% for season in seasons %}
+                        <option value="{{ season.number }}">Stagione {{ season.number }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="absolute inset-y-0 right-6 flex items-center pointer-events-none">
+                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                </div>
+
+                <!-- Desktop Sidebar Menu -->
+                <div class="hidden lg:flex flex-col gap-2">
+                    {% for season in seasons %}
+                    <button onclick="showSeason({{ season.number }})" id="nav-season-{{ season.number }}" 
+                            class="season-nav-item w-full flex items-center justify-between p-4 rounded-2xl border border-transparent transition-all hover:bg-white/5 group">
+                        <div class="flex flex-col items-start min-w-0">
+                            <span class="font-bold text-gray-400 group-hover:text-white truncate">Stagione {{ season.number }}</span>
+                            {% if season.type %}
+                            <span class="text-[8px] font-black text-blue-500 uppercase tracking-widest mt-0.5">{{ season.type }}</span>
+                            {% endif %}
+                        </div>
+                        <span class="text-[10px] bg-gray-800 text-gray-500 px-2 py-1 rounded-lg font-black group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0">{{ season.episodes|length }} EP</span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content (Season Details) -->
+        <div class="flex-1">
+            {% for season in seasons %}
+            <div id="season-content-{{ season.number }}" class="season-pane hidden animate-fade-in">
+                <div class="bg-gray-900/40 border border-white/5 rounded-[2rem] p-8 backdrop-blur-3xl">
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-6 mb-10 pb-10 border-b border-white/5">
+                        <div>
+                            <h2 class="text-3xl font-black text-white tracking-tight">Stagione {{ season.number }}</h2>
+                            <p class="text-gray-500 text-sm mt-1">Scegli quali episodi scaricare o effettua il download completo.</p>
+                        </div>
+                        
+                        <form method="post" class="flex gap-4">
+                            {% csrf_token %}
+                            <input type="hidden" name="source_alias" value="{{ source_alias }}">
+                            <input type="hidden" name="item_payload" value="{{ item_payload }}">
+                            <input type="hidden" name="season_number" value="{{ season.number }}">
+                            <input type="hidden" name="download_type" value="full_season">
+                            <button type="submit" class="h-14 px-8 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-xl shadow-blue-600/20 flex items-center gap-3 active:scale-95">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                Scarica Stagione Intera
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Episode Selector -->
+                    <form method="post" id="form-season-{{ season.number }}">
+                        {% csrf_token %}
+                        <input type="hidden" name="source_alias" value="{{ source_alias }}">
+                        <input type="hidden" name="item_payload" value="{{ item_payload }}">
+                        <input type="hidden" name="season_number" value="{{ season.number }}">
+                        <input type="hidden" name="download_type" value="episodes">
+                        <input type="hidden" name="selected_episodes" id="selected_episodes_{{ season.number }}" value="">
+
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Griglia Episodi</h3>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="selectAllEpisodes({{ season.number }})" class="text-[10px] font-bold text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-white/5 hover:border-white/10 transition-all">SELEZIONA TUTTI</button>
+                                <button type="button" onclick="deselectAllEpisodes({{ season.number }})" class="text-[10px] font-bold text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-white/5 hover:border-white/10 transition-all">DESELEZIONA</button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 2xl:grid-cols-8 gap-3 mb-10">
+                            {% for episode in season.episodes %}
+                            <label class="group relative cursor-pointer">
+                                <input type="checkbox" class="episode-checkbox hidden" data-season="{{ season.number }}" data-episode="{{ episode.number }}" value="{{ episode.number }}">
+                                <div class="episode-card relative bg-white/5 border border-white/5 rounded-2xl p-4 transition-all duration-300 transform group-hover:scale-[1.05] group-active:scale-95 text-center overflow-hidden">
+                                    <div class="relative z-10">
+                                        <div class="episode-number text-2xl font-black text-gray-600 transition-colors mb-1">{{ episode.number }}</div>
+                                        <div class="text-[9px] font-bold text-gray-500 uppercase tracking-tighter truncate">{{ episode.name|default:"Episodio" }}</div>
+                                    </div>
+                                    <!-- Glow Effect (Visible when selected) -->
+                                    <div class="selection-glow absolute inset-0 bg-blue-600/20 opacity-0 transition-opacity blur-xl"></div>
+                                    <div class="selection-border absolute inset-0 border-2 border-blue-500 opacity-0 transition-opacity rounded-2xl"></div>
+                                    <!-- Check Mark -->
+                                    <div class="absolute top-2 right-2 opacity-0 check-indicator transition-opacity">
+                                        <div class="bg-blue-500 rounded-full p-0.5 shadow-lg">
+                                            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        </div>
+                                    </div>
+                                </div>
+                            </label>
+                            {% endfor %}
+                        </div>
+
+                        <button type="submit" class="w-full h-16 bg-white hover:bg-gray-100 text-gray-900 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-2xl active:scale-[0.98] flex items-center justify-center gap-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            Avvia Download Selezionati
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .season-nav-item.active {
+        background: rgba(59, 130, 246, 0.1);
+        border-color: rgba(59, 130, 246, 0.3);
+    }
+    .season-nav-item.active span:first-child {
+        color: #fff;
+    }
+    .season-nav-item.active span:last-child {
+        background: #3b82f6;
+        color: #fff;
+    }
+
+    .episode-checkbox:checked + .episode-card {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.5);
+    }
+    .episode-checkbox:checked + .episode-card .episode-number {
+        color: #60a5fa;
+    }
+    .episode-checkbox:checked + .episode-card .selection-glow,
+    .episode-checkbox:checked + .episode-card .selection-border,
+    .episode-checkbox:checked + .episode-card .check-indicator {
+        opacity: 1;
+    }
+</style>
+
+<script>
+    function showSeason(number) {
+        // Hide all panes
+        document.querySelectorAll('.season-pane').forEach(p => p.classList.add('hidden'));
+        // Show target pane
+        document.getElementById(`season-content-${number}`).classList.remove('hidden');
+        
+        // Update nav items
+        document.querySelectorAll('.season-nav-item').forEach(n => n.classList.remove('active'));
+        const navItem = document.getElementById(`nav-season-${number}`);
+        if(navItem) navItem.classList.add('active');
+        
+        // Update mobile select
+        const mobileSelect = document.getElementById('season-selector-mobile');
+        if(mobileSelect) mobileSelect.value = number;
+    }
+
+    function selectAllEpisodes(seasonNumber) {
+        const checkboxes = document.querySelectorAll(`input.episode-checkbox[data-season="${seasonNumber}"]`);
+        checkboxes.forEach(cb => cb.checked = true);
+        updateSelectedEpisodes(seasonNumber);
+    }
+
+    function deselectAllEpisodes(seasonNumber) {
+        const checkboxes = document.querySelectorAll(`input.episode-checkbox[data-season="${seasonNumber}"]`);
+        checkboxes.forEach(cb => cb.checked = false);
+        updateSelectedEpisodes(seasonNumber);
+    }
+
+    function updateSelectedEpisodes(seasonNumber) {
+        const checkboxes = document.querySelectorAll(`input.episode-checkbox[data-season="${seasonNumber}"]:checked`);
+        const episodes = Array.from(checkboxes).map(cb => cb.value);
+        
+        let episodeString = '';
+        if (episodes.length > 0) {
+            const sortedEpisodes = episodes.map(Number).sort((a, b) => a - b);
+            let ranges = [];
+            let start = sortedEpisodes[0];
+            let end = sortedEpisodes[0];
+            
+            for (let i = 1; i <= sortedEpisodes.length; i++) {
+                if (i < sortedEpisodes.length && sortedEpisodes[i] === end + 1) {
+                    end = sortedEpisodes[i];
+                } else {
+                    if (start === end) {
+                        ranges.push(String(start));
+                    } else if (end === start + 1) {
+                        ranges.push(String(start));
+                        ranges.push(String(end));
+                    } else {
+                        ranges.push(`${start}-${end}`);
+                    }
+                    if (i < sortedEpisodes.length) {
+                        start = sortedEpisodes[i];
+                        end = sortedEpisodes[i];
+                    }
+                }
+            }
+            episodeString = ranges.join(',');
+        }
+        
+        const inputField = document.getElementById(`selected_episodes_${seasonNumber}`);
+        if(inputField) inputField.value = episodeString;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize first season
+        const firstSeason = "{% if seasons %}{{ seasons.0.number }}{% endif %}";
+        if(firstSeason) showSeason(firstSeason);
+
+        const checkboxes = document.querySelectorAll('.episode-checkbox');
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                updateSelectedEpisodes(this.dataset.season);
+            });
+        });
+
+        const forms = document.querySelectorAll('form[id^="form-season-"]');
+        forms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                const seasonNumber = this.querySelector('input[name="season_number"]').value;
+                const episodesInput = document.getElementById(`selected_episodes_${seasonNumber}`);
+                if (episodesInput && !episodesInput.value) {
+                    e.preventDefault();
+                    alert('Seleziona almeno un episodio!');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
 
       <!-- Messages -->
       {% if messages %}
@@ -139,17 +328,17 @@
                 </div>
               </div>
 
-              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-6">
+              <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 mb-8">
                 {% for episode in season.episodes %}
-                <label class="episode-checkbox-label cursor-pointer">
+                <label class="episode-checkbox-label group cursor-pointer">
                   <input type="checkbox" class="episode-checkbox hidden" data-season="{{ season.number }}" data-episode="{{ episode.number }}" value="{{ episode.number }}">
-                  <div class="episode-card bg-gray-700 hover:bg-gray-600 border-2 border-gray-600 rounded-lg p-4 transition-all duration-200 text-center">
-                    <div class="text-xl font-bold text-white mb-1">{{ episode.number }}</div>
-                    <div class="text-xs text-gray-300 line-clamp-2">{{ episode.name }}</div>
-                    <div class="checkmark hidden mt-2">
-                      <svg class="w-6 h-6 text-green-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-                      </svg>
+                  <div class="episode-card bg-gray-900/50 hover:bg-gray-700/50 border-2 border-gray-700 rounded-2xl p-4 transition-all duration-300 text-center relative overflow-hidden">
+                    <div class="text-xl font-black text-gray-500 group-hover:text-blue-400 transition-colors mb-1">{{ episode.number }}</div>
+                    <div class="text-[9px] font-bold text-gray-500 uppercase tracking-tighter truncate">{{ episode.name|default:"Episodio" }}</div>
+                    
+                    <!-- Selection Indicator -->
+                    <div class="absolute inset-0 bg-blue-600 opacity-0 transition-opacity flex items-center justify-center selection-overlay">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </div>
                   </div>
                 </label>
@@ -170,100 +359,87 @@
     </div>
   </div>
 
-  <style>
-    .line-clamp-2 {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .episode-checkbox:checked ~ .episode-card {
-      background-color: rgb(37 99 235) !important;
-      border-color: rgb(59 130 246) !important;
-    }
-
-    .episode-checkbox:checked ~ .episode-card .checkmark {
-      display: block !important;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-  </style>
-
-  <script>
+<script>
     function selectAllEpisodes(seasonNumber) {
-      const checkboxes = document.querySelectorAll(`input.episode-checkbox[data-season="${seasonNumber}"]`);
-      checkboxes.forEach(cb => cb.checked = true);
-      updateSelectedEpisodes(seasonNumber);
+        const checkboxes = document.querySelectorAll(`input.episode-checkbox[data-season="${seasonNumber}"]`);
+        checkboxes.forEach(cb => cb.checked = true);
+        updateSelectedEpisodes(seasonNumber);
     }
 
     function deselectAllEpisodes(seasonNumber) {
-      const checkboxes = document.querySelectorAll(`input.episode-checkbox[data-season="${seasonNumber}"]`);
-      checkboxes.forEach(cb => cb.checked = false);
-      updateSelectedEpisodes(seasonNumber);
+        const checkboxes = document.querySelectorAll(`input.episode-checkbox[data-season="${seasonNumber}"]`);
+        checkboxes.forEach(cb => cb.checked = false);
+        updateSelectedEpisodes(seasonNumber);
     }
 
     function updateSelectedEpisodes(seasonNumber) {
-      const checkboxes = document.querySelectorAll(`input.episode-checkbox[data-season="${seasonNumber}"]:checked`);
-      const episodes = Array.from(checkboxes).map(cb => cb.value);
-      
-      // Crea una stringa compatta (es: "1-5,7,9-12")
-      let episodeString = '';
-      if (episodes.length > 0) {
-        const sortedEpisodes = episodes.map(Number).sort((a, b) => a - b);
-        let ranges = [];
-        let start = sortedEpisodes[0];
-        let end = sortedEpisodes[0];
+        const checkboxes = document.querySelectorAll(`input.episode-checkbox[data-season="${seasonNumber}"]:checked`);
+        const episodes = Array.from(checkboxes).map(cb => cb.value);
         
-        for (let i = 1; i <= sortedEpisodes.length; i++) {
-          if (i < sortedEpisodes.length && sortedEpisodes[i] === end + 1) {
-            end = sortedEpisodes[i];
-          } else {
-            if (start === end) {
-              ranges.push(String(start));
-            } else if (end === start + 1) {
-              ranges.push(String(start));
-              ranges.push(String(end));
-            } else {
-              ranges.push(`${start}-${end}`);
+        let episodeString = '';
+        if (episodes.length > 0) {
+            const sortedEpisodes = episodes.map(Number).sort((a, b) => a - b);
+            let ranges = [];
+            let start = sortedEpisodes[0];
+            let end = sortedEpisodes[0];
+            
+            for (let i = 1; i <= sortedEpisodes.length; i++) {
+                if (i < sortedEpisodes.length && sortedEpisodes[i] === end + 1) {
+                    end = sortedEpisodes[i];
+                } else {
+                    if (start === end) {
+                        ranges.push(String(start));
+                    } else if (end === start + 1) {
+                        ranges.push(String(start));
+                        ranges.push(String(end));
+                    } else {
+                        ranges.push(`${start}-${end}`);
+                    }
+                    if (i < sortedEpisodes.length) {
+                        start = sortedEpisodes[i];
+                        end = sortedEpisodes[i];
+                    }
+                }
             }
-            if (i < sortedEpisodes.length) {
-              start = sortedEpisodes[i];
-              end = sortedEpisodes[i];
-            }
-          }
+            episodeString = ranges.join(',');
         }
-        episodeString = ranges.join(',');
-      }
-      
-      document.getElementById(`selected_episodes_${seasonNumber}`).value = episodeString;
+        
+        document.getElementById(`selected_episodes_${seasonNumber}`).value = episodeString;
     }
 
-    // Aggiungi event listener a tutti i checkbox
     document.addEventListener('DOMContentLoaded', function() {
-      const checkboxes = document.querySelectorAll('.episode-checkbox');
-      checkboxes.forEach(cb => {
-        cb.addEventListener('change', function() {
-          updateSelectedEpisodes(this.dataset.season);
+        const checkboxes = document.querySelectorAll('.episode-checkbox');
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                updateSelectedEpisodes(this.dataset.season);
+            });
         });
-      });
 
-      // Previeni submit se nessun episodio selezionato
-      const forms = document.querySelectorAll('form[id^="form-season-"]');
-      forms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-          const seasonNumber = this.querySelector('input[name="season_number"]').value;
-          const selectedEpisodes = document.getElementById(`selected_episodes_${seasonNumber}`).value;
-          
-          if (!selectedEpisodes) {
-            e.preventDefault();
-            alert('Seleziona almeno un episodio da scaricare!');
-          }
+        const forms = document.querySelectorAll('form[id^="form-season-"]');
+        forms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                const seasonNumber = this.querySelector('input[name="season_number"]').value;
+                const selectedEpisodes = document.getElementById(`selected_episodes_${seasonNumber}`).value;
+                
+                if (!selectedEpisodes) {
+                    e.preventDefault();
+                    showToast('Seleziona almeno un episodio!', 'error');
+                }
+            });
         });
-      });
     });
-  </script>
-</body>
-</html>
+
+    // Helper for toast-like alerts if needed, or just use alert
+    function showToast(msg) {
+        alert(msg);
+    }
+</script>
+
+<style>
+    .episode-checkbox:checked ~ .episode-card {
+        @apply border-blue-500 scale-95;
+    }
+    .episode-checkbox:checked ~ .episode-card .selection-overlay {
+        @apply opacity-100;
+    }
+</style>

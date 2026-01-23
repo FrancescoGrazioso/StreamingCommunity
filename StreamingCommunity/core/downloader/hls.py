@@ -12,6 +12,7 @@ from rich.console import Console
 
 # Internal utilities
 from StreamingCommunity.utils.http_client import get_headers
+from StreamingCommunity.utils.tracker import context_tracker
 from StreamingCommunity.core.processors import join_video, join_audios, join_subtitles
 from StreamingCommunity.core.downloader.media_players import MediaPlayers
 from StreamingCommunity.utils import config_manager, os_manager, internet_manager
@@ -55,6 +56,10 @@ class HLS_Downloader:
         self.output_dir = os.path.join(os.path.dirname(self.output_path), self.filename_base + "_hls_temp")
         self.file_already_exists = os.path.exists(self.output_path)
         
+        # Tracking IDs - check context if not provided
+        self.download_id = context_tracker.download_id
+        self.site_name = context_tracker.site_name
+
         # Status tracking
         self.error = None
         self.last_merge_result = None
@@ -65,7 +70,9 @@ class HLS_Downloader:
             url=self.m3u8_url,
             output_dir=self.output_dir,
             filename=self.filename_base,
-            headers=self.custom_headers
+            headers=self.custom_headers,
+            download_id=self.download_id,
+            site_name=self.site_name
         )
         self.media_downloader.parser_stream()
 
