@@ -1,171 +1,171 @@
 {% extends "searchapp/base.html" %}
+{% load static %}
+
+{% block title %}{{ query }} - Risultati{% endblock %}
 
 {% block content %}
-<div class="w-full animate-fade-in py-4">
-    <!-- Header Minimal -->
-    <div class="mb-10 flex items-center justify-between">
-        <div>
-            <p class="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 opacity-80">Catalogo Globale</p>
-            <h2 class="text-2xl font-black text-white tracking-tighter">
-                Risultati per <span class="text-blue-400">"{{ query|default:'la ricerca' }}"</span>
-            </h2>
-        </div>
-        <div class="px-4 py-2 bg-gray-800/50 rounded-xl border border-white/5 backdrop-blur-sm">
-            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{{ results|length }} match trovati</span>
-        </div>
+<div class="py-8 sm:py-12 animate-fade-in">
+  
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-10">
+    <div>
+      <div class="flex items-center gap-3 mb-3">
+        <button 
+          onclick="window.history.back()" 
+          class="p-2 hover:bg-white/10 rounded-lg transition-colors"
+        >
+          <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+        </button>
+        <h1 class="text-3xl sm:text-4xl font-bold text-white">
+          Risultati per "<span class="text-red-500">{{ query|default:'la ricerca' }}</span>"
+        </h1>
+      </div>
+      <p class="text-gray-400 ml-14">
+        {{ results|length }} titoli trovati
+      </p>
     </div>
+  </div>
 
-    <!-- Results Grid -->
-    {% if results %}
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
-        {% for result in results %}
-        <div class="group relative bg-gray-900/40 rounded-[1.5rem] overflow-hidden border border-white/5 transition-all duration-500 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-slide-up" style="animation-delay: {{ forloop.counter0|add:1 }}00ms">
-            <!-- Media Poster Container -->
-            <div class="relative aspect-[2/3] overflow-hidden">
-                <img src="{{ result.bg_image_url }}" alt="{{ result.display_title }}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
-                
-                <!-- Gradient Overlays -->
-                <div class="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-gray-900 via-gray-900/60 to-transparent"></div>
-                <div class="absolute inset-0 bg-blue-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-                <!-- Labels Top Left -->
-                <div class="absolute top-4 left-4 flex flex-col gap-2">
-                    <span class="px-2 py-1 bg-blue-600/90 backdrop-blur-md text-[9px] font-black uppercase tracking-widest text-white rounded-lg shadow-lg">
-                        {{ result.display_type }}
-                    </span>
-                </div>
-
-                <!-- Year Label Bottom Right -->
-                {% if result.display_release %}
-                <div class="absolute bottom-4 right-4">
-                    <span class="px-2 py-1 bg-gray-900/90 backdrop-blur-md text-[9px] font-black text-gray-200 rounded-lg border border-white/10">
-                        {{ result.display_release }}
-                    </span>
-                </div>
-                {% endif %}
-
-                <!-- Hover Actions -->
-                <div class="absolute inset-0 flex flex-col justify-end p-5 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-4 group-hover:translate-y-0">
-                    {% if result.is_movie %}
-                    <form action="{% url 'start_download' %}" method="post" class="w-full">
-                        {% csrf_token %}
-                        <input type="hidden" name="source_alias" value="{{ result.source_alias }}">
-                        <input type="hidden" name="item_payload" value='{{ result.payload_json|safe }}'>
-                        <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            Scarica
-                        </button>
-                    </form>
-                    {% else %}
-                    <a href="{% url 'series_detail' %}?source_alias={{ result.source_alias }}&item_payload={{ result.payload_json|urlencode }}" 
-                       class="w-full py-3 bg-white hover:bg-gray-200 text-gray-900 text-center rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16m-7 6h7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        Episodi
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Content Footer -->
-            <div class="p-4 bg-gray-900/20 backdrop-blur-sm">
-                <h4 class="text-xs font-bold text-gray-200 truncate group-hover:text-white transition-colors">{{ result.display_title }}</h4>
-                <div class="flex items-center justify-between mt-1">
-                    <p class="text-[8px] font-black text-gray-500 uppercase tracking-widest">{{ result.source }}</p>
-                </div>
-            </div>
+  <!-- Results Grid - Netflix Style -->
+  {% if results %}
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+    {% for result in results %}
+    <div class="group relative card-hover cursor-pointer">
+      <!-- Card Container -->
+      <div class="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-900">
+        <!-- Poster Image -->
+        <img 
+          src="{{ result.bg_image_url }}" 
+          alt="{{ result.display_title }}" 
+          class="w-full h-full object-cover"
+          loading="lazy"
+        >
+        
+        <!-- Gradient Overlay -->
+        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
+        
+        <!-- Top Badges -->
+        <div class="absolute top-2 left-2 right-2 flex items-start justify-between gap-2 z-10">
+          <span class="px-2 py-1 bg-red-600 text-white text-[10px] font-bold uppercase tracking-wider rounded shadow-lg">
+            {{ result.display_type }}
+          </span>
+          {% if result.display_release %}
+          <span class="px-2 py-1 bg-black/80 backdrop-blur-sm text-white text-[10px] font-semibold rounded">
+            {{ result.display_release }}
+          </span>
+          {% endif %}
         </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <!-- Empty State -->
-    <div class="flex flex-col items-center justify-center py-32 animate-fade-in">
-        <div class="w-20 h-20 bg-gray-800/30 rounded-full flex items-center justify-center mb-8 border border-white/5">
-            <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
+
+        <!-- Hover Content -->
+        <div class="absolute inset-0 flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-4 group-hover:translate-y-0">
+          <!-- Title -->
+          <h3 class="text-white font-bold text-sm mb-3 line-clamp-2 drop-shadow-lg">
+            {{ result.display_title }}
+          </h3>
+          
+          <!-- Action Buttons -->
+          <div class="flex gap-2">
+            {% if result.is_movie %}
+            <!-- Download Movie Button -->
+            <form action="{% url 'start_download' %}" method="post" class="flex-1">
+              {% csrf_token %}
+              <input type="hidden" name="source_alias" value="{{ result.source_alias }}">
+              <input type="hidden" name="item_payload" value='{{ result.payload_json|safe }}'>
+              <button 
+                type="submit" 
+                class="w-full py-2.5 bg-white hover:bg-gray-200 text-black font-bold text-xs rounded-md transition-all flex items-center justify-center gap-2 shadow-xl"
+              >
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                Scarica
+              </button>
+            </form>
+            {% else %}
+            <!-- View Episodes Button -->
+            <a 
+              href="{% url 'series_detail' %}?source_alias={{ result.source_alias }}&item_payload={{ result.payload_json|urlencode }}" 
+              class="flex-1 py-2.5 bg-white hover:bg-gray-200 text-black font-bold text-xs rounded-md transition-all flex items-center justify-center gap-2 shadow-xl"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              Episodi
+            </a>
+            {% endif %}
+            
+            <!-- Info Button -->
+            <button 
+              class="w-10 h-10 bg-gray-900/80 hover:bg-gray-800 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
+              title="Info"
+            >
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Source Badge -->
+          <div class="mt-2 text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+            {{ result.source }}
+          </div>
         </div>
-        <h2 class="text-xl font-bold text-white mb-2">Nessun risultato trovato</h2>
-        <p class="text-gray-500 text-sm">Prova a cambiare i termini di ricerca o la sorgente.</p>
-        <a href="{% url 'search_home' %}" class="mt-8 px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-[10px] uppercase tracking-widest transition-all">
-            Torna alla Home
-        </a>
+      </div>
+
+      <!-- Bottom Info (Always Visible) -->
+      <div class="mt-2 px-1">
+        <h4 class="text-sm font-semibold text-gray-300 truncate group-hover:text-white transition-colors">
+          {{ result.display_title }}
+        </h4>
+      </div>
     </div>
-    {% endif %}
+    {% endfor %}
+  </div>
+  {% else %}
+  
+  <!-- Empty State -->
+  <div class="flex flex-col items-center justify-center py-32 text-center">
+    <div class="w-24 h-24 bg-gradient-to-br from-red-600/20 to-purple-600/20 rounded-full flex items-center justify-center mb-8">
+      <svg class="w-12 h-12 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+      </svg>
+    </div>
+    <h2 class="text-3xl font-bold text-white mb-4">
+      Nessun risultato trovato
+    </h2>
+    <p class="text-gray-400 text-lg mb-8 max-w-md">
+      Prova a modificare i termini di ricerca o seleziona una sorgente diversa
+    </p>
+    <a 
+      href="{% url 'search_home' %}" 
+      class="inline-flex items-center gap-2 px-8 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition-all transform hover:scale-105 shadow-xl"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+      </svg>
+      Torna alla Ricerca
+    </a>
+  </div>
+  {% endif %}
 </div>
-{% endblock %}
 
-    <!-- Results Grid -->
-    {% if results %}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-        {% for result in results %}
-        <div class="group relative bg-gray-900 rounded-[2rem] overflow-hidden border border-gray-800 transition-all duration-500 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-slide-up" style="animation-delay: {{ forloop.counter0|add:1 }}00ms">
-            <!-- Media Poster Container -->
-            <div class="relative aspect-[2/3] overflow-hidden">
-                <img src="{{ result.bg_image_url }}" alt="{{ result.display_title }}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
-                
-                <!-- Gradient Overlays -->
-                <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-gray-900 via-gray-900/60 to-transparent"></div>
-                <div class="absolute inset-0 bg-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-                <!-- Labels -->
-                <div class="absolute top-5 left-5 flex gap-2">
-                    <span class="px-3 py-1.5 bg-blue-600/90 backdrop-blur-md text-[10px] font-black uppercase tracking-widest text-white rounded-xl shadow-lg border border-blue-400/30">
-                        {{ result.display_type }}
-                    </span>
-                    {% if result.display_release %}
-                    <span class="px-3 py-1.5 bg-gray-900/80 backdrop-blur-md text-[10px] font-black uppercase tracking-widest text-gray-200 rounded-xl shadow-lg border border-white/10">
-                        {{ result.display_release }}
-                    </span>
-                    {% endif %}
-                </div>
-
-                <!-- Hover Actions -->
-                <div class="absolute inset-0 flex flex-col justify-end p-8 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-4 group-hover:translate-y-0">
-                    <h3 class="text-xl font-black text-white mb-6 leading-tight drop-shadow-2xl">{{ result.display_title }}</h3>
-                    
-                    {% if result.is_movie %}
-                    <form action="{% url 'start_download' %}" method="post" class="w-full">
-                        {% csrf_token %}
-                        <input type="hidden" name="source_alias" value="{{ result.source_alias }}">
-                        <input type="hidden" name="item_payload" value='{{ result.payload_json|safe }}'>
-                        <button type="submit" class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl active:scale-95">
-                            Scarica Ora
-                        </button>
-                    </form>
-                    {% else %}
-                    <a href="{% url 'series_detail' %}?source_alias={{ result.source_alias }}&item_payload={{ result.payload_json|urlencode }}" 
-                       class="w-full py-4 bg-white hover:bg-gray-200 text-gray-900 text-center rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl active:scale-95">
-                        Dettagli Serie
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Footer Info -->
-            <div class="p-6 bg-gray-800/20 group-hover:bg-gray-800/40 transition-colors">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1 min-w-0">
-                        <h4 class="text-sm font-bold text-gray-200 truncate group-hover:text-white transition-colors">{{ result.display_title }}</h4>
-                        <p class="text-[9px] font-black text-gray-500 uppercase tracking-widest mt-1">{{ result.source }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <!-- Empty State -->
-    <div class="flex flex-col items-center justify-center py-32 animate-fade-in">
-        <div class="w-24 h-24 bg-gray-800/50 rounded-[2.5rem] flex items-center justify-center mb-8 border border-gray-700/50">
-            <svg class="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
-        </div>
-        <h2 class="text-2xl font-black text-white mb-2">Nessun risultato</h2>
-        <p class="text-gray-500 font-medium">Controlla l'ortografia o prova un'altra parola chiave.</p>
-        <a href="{% url 'search_home' %}" class="mt-8 px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs uppercase tracking-widest transition-all">
-            Torna alla Home
-        </a>
-    </div>
-    {% endif %}
-</div>
+<style>
+  /* Line clamp utility */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  /* Enhanced card hover - Netflix style */
+  @media (min-width: 768px) {
+    .card-hover:hover {
+      transform: scale(1.15);
+      z-index: 20;
+    }
+  }
+</style>
+{% endblock %}  

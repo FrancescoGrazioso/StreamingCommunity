@@ -189,13 +189,37 @@ def MP4_Downloader(url: str, path: str, referer: str = None, headers_: dict = No
                     except (KeyboardInterrupt):
                         if not interrupt_handler.force_quit:
                             interrupt_handler.kill_download = True
+                            
                     except Exception as e:
                         incomplete_error = True
                         interrupt_handler.kill_download = True
                         console.print(f"\n[red]Download error: {e}. Saving partial download.")
+
+                    finally:
+                        try:
+                            file.flush()
+                            os.fsync(file.fileno())
+                        except Exception:
+                            pass
                 
     if os.path.exists(temp_path):
-        os.rename(temp_path, path)
+        last_exc = None
+        for attempt in range(10):
+            try:
+                os.replace(temp_path, path)
+                last_exc = None
+                break
+
+            except PermissionError as e:
+                last_exc = e
+                console.log(f"[yellow]Rename attempt {attempt+1}/10 failed: {e}")
+                time.sleep(0.5)
+                import gc
+                gc.collect()
+
+        if last_exc:
+            console.print(f"[red]Could not rename temp file after retries: {last_exc}")
+            return None, interrupt_handler.kill_download
  
     if os.path.exists(path):
         if show_final_info:

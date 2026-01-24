@@ -1,156 +1,102 @@
 {% extends "searchapp/base.html" %}
+{% load static %}
+
+{% block title %}Cerca e Scarica{% endblock %}
 
 {% block content %}
-<div class="w-full max-w-7xl mx-auto animate-fade-in pt-8">
-    <!-- Hero / Intro -->
-    <div class="mb-16">
-        <h2 class="text-xs font-black uppercase tracking-[0.5em] text-blue-500 mb-4 opacity-70">Lavorazione Streaming Globale</h2>
-        <h1 class="text-5xl sm:text-7xl font-black text-white leading-[1.1] tracking-tighter max-w-4xl">
-            Tutto ciò che ami, <br>
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-blue-600">in un unico posto.</span>
-        </h1>
-    </div>
 
-    <!-- Linux-Style Command Search (Keyword First, then Source) -->
-    <div class="relative group mb-24">
-        <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
-        <div class="relative bg-gray-900/40 backdrop-blur-3xl border border-white/5 rounded-[2rem] p-4 shadow-2xl overflow-hidden">
-            <!-- Background Accent -->
-            <div class="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
-            <form action="{% url 'search' %}" method="post" class="relative z-10 flex flex-col lg:flex-row items-stretch gap-4">
-                {% csrf_token %}
-                
-                <!-- Keyword Input (Primary Focus) -->
-                <div class="relative flex-1 group/input">
-                    <div class="absolute inset-y-0 left-6 flex items-center pointer-events-none">
-                        <svg class="w-6 h-6 text-gray-500 group-focus-within/input:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </div>
-                    <input type="text" name="query" id="id_query" required placeholder="Inserisci titolo..." 
-                           class="w-full h-20 bg-white/5 border border-white/5 rounded-2xl pl-16 pr-6 text-xl font-bold text-white placeholder-gray-500 focus:bg-white/10 focus:ring-4 focus:ring-blue-500/20 transition-all outline-none">
-                </div>
+<!-- Search Section -->
+<div id="search-section" class="py-16 sm:py-24">
+  <div class="max-w-4xl mx-auto">
 
-                <!-- Provider Selector -->
-                <div class="relative w-full lg:w-96 group/select">
-                    <div class="absolute inset-y-0 left-6 flex items-center pointer-events-none z-20">
-                        <svg class="w-5 h-5 text-gray-500 group-focus-within/select:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1-4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </div>
-                    {{ form.site }}
-                    <div class="absolute inset-y-0 right-6 flex items-center pointer-events-none">
-                        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </div>
-                </div>
-
-                <!-- Hidden Submit (Press Enter to search) -->
-                <button type="submit" class="hidden"></button>
-            </form>
+    <!-- Search Form Card -->
+    <form action="{% url 'search' %}" method="post" class="bg-gradient-to-br from-gray-900/80 to-gray-900/40 backdrop-blur-xl border border-gray-800 rounded-2xl p-6 sm:p-10 shadow-2xl animate-zoom-in">
+      {% csrf_token %}
+      
+      <div class="space-y-6">
+        <!-- Search Input -->
+        <div class="relative group">
+          <label for="id_query" class="block text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            Titolo o parola chiave
+          </label>
+          <input 
+            type="text" 
+            name="query" 
+            id="id_query" 
+            required 
+            placeholder="Es: Breaking Bad, The Matrix, Stranger Things..." 
+            class="w-full h-16 bg-black/50 border-2 border-gray-800 rounded-xl px-6 text-white text-lg placeholder-gray-600 focus:border-red-600 focus:outline-none focus:ring-4 focus:ring-red-600/20 transition-all"
+            autofocus
+          >
         </div>
-    </div>
+
+        <!-- Platform Selector -->
+        <div class="relative group">
+          <label for="id_site" class="block text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+            Sorgente streaming
+          </label>
+          <div class="relative">
+            {{ form.site }}
+            <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button 
+        type="submit" 
+        class="w-full mt-8 h-16 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-lg font-bold rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-2xl shadow-red-600/30 flex items-center justify-center gap-3"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+        Cerca Ora
+      </button>
+    </form>
+  </div>
 </div>
 
 <style>
-    /* Targeting Django form widget IDs */
-    #id_site {
-        appearance: none;
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        border: 1px solid rgba(255, 255, 255, 0.05) !important;
-        width: 100% !important;
-        height: 5rem !important; /* matches h-20 */
-        padding-left: 4.5rem !important;
-        padding-right: 3.5rem !important;
-        border-radius: 1rem !important;
-        color: white !important;
-        font-weight: 700 !important;
-        font-size: 1.1rem !important;
-        outline: none !important;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-    #id_site:focus {
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        border-color: rgba(59, 130, 246, 0.3) !important;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1) !important;
-    }
-    #id_site option {
-        background-color: #0f172a;
-        color: white;
-        padding: 1rem;
-    }
+  #id_site {
+    appearance: none;
+    width: 100%;
+    height: 4rem;
+    padding: 0 3.5rem 0 1.5rem;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 2px solid rgb(31 41 55);
+    border-radius: 0.75rem;
+    color: white;
+    font-size: 1.125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #id_site:focus {
+    border-color: rgb(220 38 38);
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
+  }
+  #id_site option {
+    background-color: rgb(17 24 39);
+    color: white;
+    padding: 1rem;
+    font-weight: 500;
+  }
+  
+  /* Smooth scroll */
+  html {
+    scroll-behavior: smooth;
+  }
 </style>
 {% endblock %}
-
-    <!-- Main Search Card -->
-    <div class="bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-3xl p-8 shadow-2xl">
-        <form action="{% url 'search' %}" method="post" class="space-y-6">
-            {% csrf_token %}
-            
-            <div class="space-y-4">
-                <!-- Site Selection -->
-                <div class="relative group">
-                    <label class="block text-sm font-medium text-gray-400 mb-2 ml-1">Sorgente Streaming</label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                            <svg class="w-5 h-5 text-gray-500 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                            </svg>
-                        </div>
-                        {{ form.site }}
-                    </div>
-                </div>
-
-                <!-- Query Input -->
-                <div class="relative group">
-                    <label class="block text-sm font-medium text-gray-400 mb-2 ml-1">Cerca Titolo</label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                            <svg class="w-5 h-5 text-gray-500 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
-                        </div>
-                        {{ form.query }}
-                    </div>
-                </div>
-            </div>
-
-            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-600/20 flex items-center justify-center group text-lg">
-                Cerca ora
-                <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7"></path>
-                </svg>
-            </button>
-        </form>
-    </div>
-
-    <!-- Quick Tips -->
-    <div class="mt-8 grid grid-cols-3 gap-4">
-        <div class="p-4 bg-gray-800/30 rounded-2xl border border-gray-700/50 text-center">
-            <div class="text-blue-500 mb-1">
-                <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-            <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Veloce</div>
-        </div>
-        <div class="p-4 bg-gray-800/30 rounded-2xl border border-gray-700/50 text-center">
-            <div class="text-blue-500 mb-1">
-                <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-            <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Sicuro</div>
-        </div>
-        <div class="p-4 bg-gray-800/30 rounded-2xl border border-gray-700/50 text-center">
-            <div class="text-blue-500 mb-1">
-                <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-            <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Multi-sito</div>
-        </div>
-    </div>
-</div>
-
-<style>
-    #id_site, #id_query {
-        @apply w-full bg-white text-gray-900 rounded-2xl py-4 pl-12 pr-4 border-none shadow-inner transition-all focus:ring-4 focus:ring-blue-500/20 text-lg font-medium;
-    }
-    select { appearance: none; }
-</style>
