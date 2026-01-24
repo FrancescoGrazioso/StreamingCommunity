@@ -152,6 +152,8 @@ jobs:
         run: |
           pyinstaller --onefile --hidden-import=ua_generator \
             --hidden-import=bs4 --hidden-import=httpx --hidden-import=rich \
+            --hidden-import=rich._unicode_data \
+            --collect-all rich \
             --hidden-import=unidecode \
             --hidden-import=jsbeautifier --hidden-import=jsbeautifier.core \
             --hidden-import=jsbeautifier.javascript --hidden-import=jsbeautifier.javascript.beautifier \
