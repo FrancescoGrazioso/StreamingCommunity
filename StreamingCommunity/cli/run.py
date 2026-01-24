@@ -6,8 +6,6 @@ import logging
 import platform
 import argparse
 import importlib
-import threading
-import asyncio
 import subprocess
 from typing import Callable, Tuple
 
@@ -229,39 +227,9 @@ def execute_hooks(stage: str) -> None:
                 raise
 
 
-def restart_script():
-    """Restart script with same command line arguments."""
-    print("\nRiavvio dello script...\n")
-    os.execv(sys.executable, [sys.executable] + sys.argv)
-
-
 def force_exit():
     """Force script termination in any context."""
-    print("\nChiusura dello script in corso...")
-    
-    # Close all threads except main
-    for t in threading.enumerate():
-        if t is not threading.main_thread():
-            print(f"Chiusura thread: {t.name}")
-            t.join(timeout=1)
-    
-    # Stop asyncio if active
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            print("Arresto del loop asyncio...")
-            loop.stop()
-    except RuntimeError:
-        pass
-    
-    # Exit gracefully or force
-    try:
-        print("Uscita con sys.exit(0)")
-        sys.exit(0)
-    except SystemExit:
-        pass
-    
-    print("Uscita forzata con os._exit(0)")
+    console.print("\n[red]Closing the application...")
     os._exit(0)
 
 
@@ -423,35 +391,26 @@ def main():
 
                 if category == "global":
                     call_global_search(args.search)
-                    return
 
                 if category in input_to_function:
                     run_function(input_to_function[category], search_terms=args.search)
-                else:
-                    console.print("[red]Invalid category.")
-                    if getattr(args, 'not_close'):
-                        restart_script()
-                    else:
-                        force_exit()
                 
                 user_response = msg.ask("\n[cyan]Do you want to perform another search? (y/n)", choices=["y", "n"], default="n")
                 if user_response.lower() != 'y':
                     break
 
+            force_exit()
+
         else:
             category = get_user_site_selection(args, choice_labels)
+
             if category == "global":
                 call_global_search(args.search)
-                return
 
             if category in input_to_function:
                 run_function(input_to_function[category], search_terms=args.search)
-            else:
-                console.print("[red]Invalid category.")
-                if getattr(args, 'not_close'):
-                    restart_script()
-                else:
-                    force_exit()
+
+            force_exit()
                 
     finally:
         execute_hooks('post_run')

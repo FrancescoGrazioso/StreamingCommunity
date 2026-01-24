@@ -47,14 +47,14 @@ CONF_PROXY = config_manager.config.get_dict("REQUESTS", "proxy") or {}
 
 
 class MediaDownloader:
-    def __init__(self, url: str, output_dir: str, filename: str, headers: Optional[Dict] = None, key: Optional[str] = None, cookies: Optional[Dict] = None, decrypt_preference: str = "bento4", download_id: str = None, site_name: str = None):
+    def __init__(self, url: str, output_dir: str, filename: str, headers: Optional[Dict] = None, key: Optional[str] = None, cookies: Optional[Dict] = None, decrypt_preference: str = "shaka", download_id: str = None, site_name: str = None):
         self.url = url
         self.output_dir = Path(output_dir)
         self.filename = filename
         self.headers = headers or {}
         self.key = key
         self.cookies = cookies or {}
-        self.decrypt_preference = decrypt_preference.lower()
+        self.decrypt_preference = decrypt_preference.strip().lower()
         self.download_id = download_id
         self.site_name = site_name
 

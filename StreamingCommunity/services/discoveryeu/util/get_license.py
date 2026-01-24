@@ -155,6 +155,12 @@ def get_playback_info(video_id):
     
     streaming_data = json_response['data']['attributes']['streaming']
     widevine_scheme = streaming_data[0]['protection']['schemes'].get('widevine')
+    #playready_scheme = streaming_data[0]['protection']['schemes'].get('playready')
+    fairplay_scheme = streaming_data[0]['protection']['schemes'].get('fairplay')
+
+    if fairplay_scheme:
+        raise RuntimeError("FairPlay DRM is not supported")
+
     return {
         'mpd_url': streaming_data[0]['url'],
         'license_url': widevine_scheme['licenseUrl'] if widevine_scheme else None,

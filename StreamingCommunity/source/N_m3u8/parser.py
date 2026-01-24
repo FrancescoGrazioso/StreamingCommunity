@@ -31,7 +31,7 @@ class LogParser:
 
         if 'ERROR' in line.upper():
             self.errors.append(line)
-            console.print(f"[red]{line}.")
+            console.print(f"N_M3U8: [red]{line}")
 
         return 'WARN' in line.upper(), 'ERROR' in line.upper()
 

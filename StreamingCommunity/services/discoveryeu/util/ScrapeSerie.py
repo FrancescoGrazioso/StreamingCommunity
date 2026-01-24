@@ -140,24 +140,46 @@ class GetSerieInfo:
             self.collect_season()
         return len(self.seasons_manager.seasons)
         
-    def getRealNumberSeason(self,index_season:int) -> int:
+    def getRealNumberSeason(self, index_season:int) -> int:
         """Get the real number of season, not the index"""
         seasons = self.seasons_manager.seasons
-        i = 0
+        if not seasons:
+            self.collect_season()
+
+        # Treat as display index if within range
+        if 1 <= index_season <= len(seasons):
+            season = seasons[index_season - 1]
+            return getattr(season, 'number', None)
+
+        # Otherwise, if a season with that number exists, return it (it's already the real number)
         for season in seasons:
-            i+=1
-            if i == index_season:
-                return season.__str__().split("id=season_")[1].split(',')[0]
+            if getattr(season, 'number', None) == index_season:
+                return index_season
+
         return None
 
     def getEpisodeSeasons(self, season_number: int) -> list:
         """Get all episodes for a specific season"""
         if not self.seasons_manager.seasons:
             self.collect_season()
-        
-        season_index = season_number - 1
-        season = self.seasons_manager.seasons[season_index]
-        return season.episodes.episodes
+
+        seasons = self.seasons_manager.seasons
+
+        # Find by season.number
+        for season in seasons:
+            if getattr(season, 'number', None) == season_number:
+                return season.episodes.episodes
+
+        # Fallback: treat as 1-based index
+        try:
+            season_index = int(season_number) - 1
+        except Exception:
+            return []
+
+        if 0 <= season_index < len(seasons):
+            return seasons[season_index].episodes.episodes
+
+        return []
     
     def selectEpisode(self, season_number: int, episode_index: int) -> dict:
         """Get information for a specific episode"""

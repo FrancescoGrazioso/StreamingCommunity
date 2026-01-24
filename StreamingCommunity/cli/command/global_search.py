@@ -35,7 +35,7 @@ def global_search(search_terms: str = None, selected_sites: list = None):
     all_results = {}
     
     if search_terms is None:
-        search_terms = msg.ask("\n[purple]Enter search terms for global search: ").strip()
+        search_terms = msg.ask("\n[purple]Enter search terms for global search").strip()
     
     # Organize sites by category for better display
     sites_by_category = {}
