@@ -1,10 +1,15 @@
 # 18.07.25
 
+import sys
 
+
+# Logic
 from .checker import check_bento4, check_ffmpeg, check_megatools, check_n_m3u8dl_re, check_shaka_packager
 from .device_install import check_device_wvd_path, check_device_prd_path
 
 
+# Variable
+is_binary_installation = getattr(sys, 'frozen', False)
 ffmpeg_path, ffprobe_path = check_ffmpeg()
 bento4_decrypt_path = check_bento4()
 wvd_path = check_device_wvd_path()
@@ -13,6 +18,9 @@ megatools_path = check_megatools()
 n_m3u8dl_re_path = check_n_m3u8dl_re()
 shaka_packager = check_shaka_packager()
 
+
+def get_is_binary_installation() -> bool:
+    return is_binary_installation
 
 def get_ffmpeg_path() -> str:
     return ffmpeg_path

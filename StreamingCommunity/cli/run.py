@@ -21,7 +21,7 @@ from StreamingCommunity.setup import get_prd_path, get_wvd_path, get_info_wvd, g
 from StreamingCommunity.services._base import load_search_functions
 from StreamingCommunity.services._base.loader import folder_name as lazy_loader_folder
 from StreamingCommunity.utils import config_manager, os_manager, start_message
-from StreamingCommunity.upload import git_update
+from StreamingCommunity.upload import git_update, binary_update
 
 
 # Config
@@ -263,6 +263,7 @@ def setup_argument_parser(search_functions):
     parser.add_argument('--category', type=int, help='Category (1: anime, 2: film_&_serie, 3: serie, 4: torrent)')
     parser.add_argument('--auto-first', action='store_true', help='Auto-download first result (use with --site and --search)')
     parser.add_argument('--site', type=str, help='Site by name or index')
+    parser.add_argument('-UP', '--update', action='store_true', help='Auto-update to latest version (binary only)')
     
     return parser
 
@@ -372,9 +373,20 @@ def main():
 
     try:
         search_functions = load_search_functions()
-
         parser = setup_argument_parser(search_functions)
         args = parser.parse_args()
+        
+        # Handle auto-update
+        if args.update:
+            console.print("\n[cyan]  AUTO-UPDATE MODE")
+            success = binary_update()
+            
+            if success:
+                console.print("\n[green]Update process initiated successfully!")
+            else:
+                console.print("\n[yellow]Update was not performed")
+            return
+        
         apply_config_updates(args)
 
         if getattr(args, 'global'):

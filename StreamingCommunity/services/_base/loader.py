@@ -11,6 +11,10 @@ from typing import Dict
 from rich.console import Console
 
 
+# Internal utilites
+from StreamingCommunity.setup import get_is_binary_installation
+
+
 # Variable
 console = Console()
 folder_name = "services"
@@ -94,8 +98,8 @@ def load_search_functions() -> Dict[str, LazySearchModule]:
     """
     loaded_functions = {}
     
-    # Determine base path (calculated once)
-    if getattr(sys, 'frozen', False):
+    # Determine base path
+    if get_is_binary_installation():
         base_path = os.path.join(sys._MEIPASS, "StreamingCommunity", folder_name)
     else:
         base_path = os.path.dirname(os.path.dirname(__file__))
