@@ -64,8 +64,14 @@ class HLS_Downloader:
         self.error = None
         self.last_merge_result = None
         self.media_players = None
+
+    def start(self) -> Dict[str, Any]:
+        """Main execution flow for downloading HLS content"""
+        if self.file_already_exists:
+            console.print("[yellow]File already exists.")
+            return self.output_path, False
         
-        # Setup MediaDownloader
+        # Setup media downloader
         self.media_downloader = MediaDownloader(
             url=self.m3u8_url,
             output_dir=self.output_dir,
@@ -75,12 +81,6 @@ class HLS_Downloader:
             site_name=self.site_name
         )
         self.media_downloader.parser_stream()
-
-    def start(self) -> Dict[str, Any]:
-        """Main execution flow for downloading HLS content"""
-        if self.file_already_exists:
-            console.log(f"[yellow]File already exists: [red]{self.output_path}")
-            return self.output_path, False
         
         # Create output directory
         os_manager.create_path(self.output_dir)

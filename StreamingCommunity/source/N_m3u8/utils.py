@@ -19,7 +19,6 @@ def convert_size_to_bytes(size_str: str) -> Optional[int]:
     except Exception:
         return None
 
-
 def format_bytes(bytes_num: int) -> str:
     """Format bytes to human readable string"""
     if bytes_num >= 1024 * 1024 * 1024:

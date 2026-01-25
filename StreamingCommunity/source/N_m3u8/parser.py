@@ -107,4 +107,5 @@ def parse_meta_json(json_path: str, selected_json_path: str) -> List[StreamInfo]
             total_duration=det.get('duration', s.get("Playlist", {}).get("TotalDuration", 0)),
             segment_count=det.get('segments', s.get("SegmentsCount", 0))
         ))
+        
     return streams

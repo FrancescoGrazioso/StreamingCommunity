@@ -65,7 +65,7 @@ def MP4_Downloader(url: str, path: str, referer: str = None, headers_: dict = No
     url = str(url).strip()
     path = os_manager.get_sanitize_path(path)
     if os.path.exists(path):
-        console.log("[red]Output file already exists.")
+        console.print("[yellow]File already exists.")
         return None, False
 
     if not (url.lower().startswith('http://') or url.lower().startswith('https://')):

@@ -28,9 +28,6 @@ class TVShowManager:
         self.slice_end = 10
         self.step = self.slice_end
         self.column_info = []
-        self.table_title = None
-        self.table_style = "blue"
-        self.show_lines = False
 
     def add_column(self, column_info: Dict[str, Dict[str, str]]) -> None:
         """
@@ -68,12 +65,10 @@ class TVShowManager:
 
         # Create table with specified style
         table = Table(
-            title=self.table_title,
             box=box.ROUNDED,
             show_header=True,
             header_style="cyan",
-            border_style=self.table_style,
-            show_lines=self.show_lines,
+            border_style="blue",
             padding=(0, 1)
         )
 
@@ -94,8 +89,6 @@ class TVShowManager:
         for idx, entry in enumerate(data_slice):
             if entry:
                 row_data = [str(entry.get(col_name, '')) for col_name in self.column_info.keys()]
-                
-                # Alternate row styling for better readability
                 style = "dim" if idx % 2 == 1 else None
                 table.add_row(*row_data, style=style)
 

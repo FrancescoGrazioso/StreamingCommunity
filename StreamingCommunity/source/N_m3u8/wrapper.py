@@ -10,6 +10,7 @@ from typing import Optional, List, Dict, Any
 
 # External
 import httpx
+from rich import box
 from rich.table import Table
 from rich.console import Console
 from rich.progress import Progress, TextColumn
@@ -274,6 +275,7 @@ class MediaDownloader:
 
                     url = sub['url']
                     lang = sub.get('language', 'unknown')
+
                     # Prefer previously resolved extension, then explicit 'type', then 'format', then fallback 'srt'
                     sub_type = sub.get('_ext') or sub.get('type') or sub.get('format') or 'srt'
 
@@ -487,7 +489,14 @@ class MediaDownloader:
 
     def _display_stream_table(self):
         """Display streams in a rich table"""
-        table = Table(show_header=True, header_style="bold cyan")
+        table = Table(
+            box=box.ROUNDED,
+            show_header=True, 
+            header_style="cyan",
+            border_style="blue",
+            padding=(0, 1)
+        )
+
         cols = [
             ("Type", "cyan"), ("Ext", "magenta"), ("Sel", "green"),
             ("Resolution", "yellow"), ("Bitrate", "yellow"), ("Codec", "green"), 
@@ -497,8 +506,9 @@ class MediaDownloader:
         for col, color in cols:
             table.add_column(col, style=color, justify="right" if col == "Segments" else "left")
         
-        for s in self.streams:
+        for idx, s in enumerate(self.streams):
             bitrate = s.bandwidth if (s.bandwidth and s.bandwidth not in ["0 bps", "N/A"]) else ""
+            style = "dim" if idx % 2 == 1 else None
             table.add_row(
                 f"{s.type}{' [red]*CENC' if s.encrypted else ''}",
                 s.extension or "",
@@ -509,7 +519,8 @@ class MediaDownloader:
                 s.language or "",
                 s.name or "",
                 internet_manager.format_time(s.total_duration, add_hours=True) if s.total_duration > 0 else "N/A",
-                str(s.segment_count)
+                str(s.segment_count),
+                style=style
             )
         
         console.print(table)

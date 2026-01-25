@@ -293,7 +293,7 @@ class DASH_Downloader:
     def start(self):
         """Main execution flow for downloading DASH content."""
         if self.file_already_exists:
-            console.log(f"[yellow]File already exists: [red]{self.output_path}")
+            console.print("[yellow]File already exists.")
             return self.output_path, False
         
         # Create output directory

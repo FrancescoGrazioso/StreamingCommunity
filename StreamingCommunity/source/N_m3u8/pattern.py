@@ -2,7 +2,6 @@
 
 import re
 
-
 PERCENT_RE = re.compile(r"(\d+\.\d+)%")
 SPEED_RE = re.compile(r"(\d+\.\d+(?:MB|KB|GB)ps)")
 SIZE_RE = re.compile(r"(\d+\.\d+(?:MB|GB|KB))/(\d+\.\d+(?:MB|GB|KB))")
