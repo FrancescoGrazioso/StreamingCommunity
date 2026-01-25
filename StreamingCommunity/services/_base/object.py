@@ -140,6 +140,7 @@ class MediaItem(metaclass=MediaItemMeta):
     desc: str
     slug: str
     year: str
+    provider_language: str
  
 class MediaManager:
     def __init__(self):

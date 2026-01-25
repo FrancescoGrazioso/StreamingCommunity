@@ -127,6 +127,7 @@ def title_search(query: str) -> int:
                     'date': date if date not in ("", None) else "1999-19-19",
                     'image': image_url,
                     'year': date.split("-")[0] if date and "-" in date else "1999",
+                    'provider_language': lang
                 })
 
             except Exception as e:

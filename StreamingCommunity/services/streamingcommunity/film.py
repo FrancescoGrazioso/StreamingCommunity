@@ -47,7 +47,7 @@ def download_film(select_title: MediaItem) -> str:
             tmdb_data = {'id': result.get('id')}
 
     # Init class
-    video_source = VideoSource(f"{site_constants.FULL_URL}/it", False, select_title.id, tmdb_data=tmdb_data)
+    video_source = VideoSource(f"{site_constants.FULL_URL}/{select_title.provider_language}", False, select_title.id, tmdb_data=tmdb_data)
 
     # Retrieve iframe only if not using TMDB API
     if tmdb_data is None:

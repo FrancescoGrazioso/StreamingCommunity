@@ -286,18 +286,14 @@ def display_episodes_list(episodes_manager) -> str:
 
     # Check if any episode has non-empty fields
     has_category = False
-    has_number = False
     has_duration = False
     
     for media in episodes_manager:
         category = media.get('category') if isinstance(media, dict) else getattr(media, 'category', None)
-        number = media.get('number') if isinstance(media, dict) else getattr(media, 'number', None)
         duration = media.get('duration') if isinstance(media, dict) else getattr(media, 'duration', None)
         
         if category is not None and str(category).strip() != '':
             has_category = True
-        if number is not None and str(number).strip() != '':
-            has_number = True
         if duration is not None and str(duration).strip() != '':
             has_duration = True
 
@@ -306,8 +302,6 @@ def display_episodes_list(episodes_manager) -> str:
         "Index": {'color': 'red'},
     }
     
-    if has_number:
-        column_info["Number"] = {'color': 'cyan'}
     
     column_info["Name"] = {'color': 'magenta'}
     
@@ -330,10 +324,6 @@ def display_episodes_list(episodes_manager) -> str:
             'Index': str(i + 1),
             'Name': name,
         }
-        
-        if has_number:
-            episode_info['Number'] = number
-        
         if has_category:
             episode_info['Category'] = category
         

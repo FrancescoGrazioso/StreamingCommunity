@@ -48,6 +48,11 @@ class GetSerieInfo:
                 block_type = block.get('type', '')
                 block_name = block.get('name', 'N/A')
                 block_id = block.get('id', '')
+
+                # Skip Clip and Extra blocks
+                if block_name.lower() == 'clip' or block_name.lower() == 'extra':
+                    print(" - Skipping Clip or Extra block")
+                    continue
                 
                 # Only process multimedia blocks with sets
                 if block_type == 'RaiPlay Multimedia Block' and 'sets' in block:

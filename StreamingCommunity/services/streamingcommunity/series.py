@@ -92,8 +92,8 @@ def download_series(select_season: MediaItem, season_selection: str = None, epis
         - episode_selection (str, optional): Pre-defined episode selection that bypasses manual input
     """
     start_message()
-    video_source = VideoSource(f"{site_constants.FULL_URL}/it", True, select_season.id)
-    scrape_serie = GetSerieInfo(f"{site_constants.FULL_URL}/it", select_season.id, select_season.slug, select_season.year)
+    video_source = VideoSource(f"{site_constants.FULL_URL}/{season_selection.provider_language}", True, select_season.id)
+    scrape_serie = GetSerieInfo(f"{site_constants.FULL_URL}/{season_selection.provider_language}", select_season.id, select_season.slug, select_season.year)
 
     scrape_serie.getNumberSeason()
     seasons_count = len(scrape_serie.seasons_manager)
