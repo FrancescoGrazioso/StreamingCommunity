@@ -156,27 +156,21 @@ class MediaDownloader:
 
         console.print("[cyan]Analyzing playlist...")
         log_parser = LogParser()
-        
-        # Use errors='replace' to handle non-UTF-8 characters
-        result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors='replace', timeout=request_timeout)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors='replace', bufsize=1, universal_newlines=True)
         
         # Save parsing log
         log_path = self.output_dir / f"{self.filename}_parsing.log"
         with open(log_path, 'w', encoding='utf-8', errors='replace') as log_file:
             log_file.write(f"Command: {' '.join(cmd)}\n{'='*80}\n\n")
-            log_file.write(result.stdout)
-            if result.stderr:
-                log_file.write("\n--- STDERR ---\n")
-                log_file.write(result.stderr)
-        
-        # Parse stderr and stdout
-        for line in result.stderr.split('\n'):
-            if line.strip():
-                log_parser.parse_line(line)
-        
-        for line in result.stdout.split('\n'):
-            if line.strip():
-                log_parser.parse_line(line)
+            
+            for line in proc.stdout:
+                line = line.rstrip()
+                if line.strip():
+                    log_parser.parse_line(line)
+                    log_file.write(line + "\n")
+                    log_file.flush()
+            
+            proc.wait()
         
         analysis_dir = analysis_path / "temp_analysis"
         self.meta_json_path = analysis_dir / "meta.json"
@@ -357,7 +351,6 @@ class MediaDownloader:
                 cmd.extend(["--key", single_key])
         
         cmd.append(self.url)
-
         console.print("\n[cyan]Starting download...")
         
         # Download external subtitles
@@ -365,7 +358,7 @@ class MediaDownloader:
         asyncio.set_event_loop(loop)
         external_subs = loop.run_until_complete(self._download_external_subtitles())
         
-        log_parser = LogParser()
+        log_parser = LogParser(show_warnings=False)
         log_path = self.output_dir / f"{self.filename}_download.log"
         subtitle_sizes = {}
         
@@ -382,9 +375,7 @@ class MediaDownloader:
             ) as progress:
                 
                 tasks = {}
-                
-                # Use errors='replace' to handle encoding issues
-                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors='replace')
+                proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors='replace', bufsize=1, universal_newlines=True)
 
                 with proc:
                     for line in proc.stdout:
@@ -455,14 +446,7 @@ class MediaDownloader:
 
         # Update global tracker with the values parsed from the current line
         if self.download_id:
-            download_tracker.update_progress(
-                self.download_id,
-                key,
-                cur_percent,
-                cur_speed,
-                cur_size,
-                cur_segment
-            )
+            download_tracker.update_progress(self.download_id, key, cur_percent, cur_speed, cur_size, cur_segment)
         
         return task
 

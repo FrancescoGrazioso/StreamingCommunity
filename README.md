@@ -366,8 +366,7 @@ make LOCAL_DIR=/your/path run-container
 
 ## TODO
 
-- [ ] Improve GUI - Enhance the graphical user interface
-- [ ] Add Crunchyroll subtitle synchronization
+- [ ] Improve GUI - Enhance the graphical user interface with image for all episode
 
 ---
 

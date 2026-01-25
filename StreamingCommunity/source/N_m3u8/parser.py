@@ -18,9 +18,11 @@ console = Console()
 
 
 class LogParser:
-    def __init__(self):
+    def __init__(self, show_warnings: bool = True, show_errors: bool = True):
         self.warnings = []
         self.errors = []
+        self.show_warnings = show_warnings
+        self.show_errors = show_errors
     
     def parse_line(self, line: str) -> Tuple[bool, bool]:
         """Parse a log line, return (has_warning, has_error)"""
@@ -28,10 +30,13 @@ class LogParser:
         
         if 'WARN' in line.upper(): 
             self.warnings.append(line)
+            if self.show_warnings and 'Response' in line:
+                console.print(f"N_M3U8[yellow]{line.split('WARN',1)[1].strip()}")
 
         if 'ERROR' in line.upper():
             self.errors.append(line)
-            console.print(f"N_M3U8: [red]{line}")
+            if self.show_errors:
+                console.print(f"N_M3U8[red]{line.split('ERROR',1)[1].strip()}")
 
         return 'WARN' in line.upper(), 'ERROR' in line.upper()
 

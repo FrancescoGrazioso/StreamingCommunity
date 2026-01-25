@@ -8,7 +8,7 @@
   
   <!-- Header -->
   <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-10">
-    <div>
+      <div>
       <div class="flex items-center gap-3 mb-3">
         <button 
           onclick="window.history.back()" 
@@ -22,9 +22,18 @@
           Risultati per "<span class="text-red-500">{{ query|default:'la ricerca' }}</span>"
         </h1>
       </div>
-      <p class="text-gray-400 ml-14">
+      <p id="results-count" class="text-gray-400 ml-14">
         {{ results|length }} titoli trovati
       </p>
+
+      <!-- Filter Controls -->
+      <div class="mt-4 ml-14">
+        <div class="inline-flex rounded-md bg-black/30 p-1">
+          <button id="filter-all" onclick="filterResults('all')" class="px-3 py-1 text-sm font-semibold text-white">Tutti</button>
+          <button id="filter-movies" onclick="filterResults('movie')" class="px-3 py-1 text-sm font-medium text-gray-300 hover:text-white">Film</button>
+          <button id="filter-series" onclick="filterResults('series')" class="px-3 py-1 text-sm font-medium text-gray-300 hover:text-white">Serie</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -32,7 +41,7 @@
   {% if results %}
   <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
     {% for result in results %}
-    <div class="group relative card-hover cursor-pointer">
+    <div class="group relative card-hover cursor-pointer" data-type="{% if result.is_movie %}movie{% else %}series{% endif %}">
       <!-- Card Container -->
       <div class="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-900">
         <!-- Poster Image -->
@@ -168,4 +177,41 @@
     }
   }
 </style>
-{% endblock %}  
+<script>
+  function filterResults(filter) {
+    const cards = document.querySelectorAll('.group.card-hover[data-type]');
+    let visible = 0;
+    cards.forEach(card => {
+      const type = card.dataset.type;
+      if (filter === 'all' || type === filter) {
+        card.style.display = '';
+        visible++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    const countEl = document.getElementById('results-count');
+    if (countEl) {
+      countEl.textContent = `${visible} titoli trovati`;
+    }
+
+    // Update active button styles
+    ['filter-all','filter-movies','filter-series'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      if ((filter === 'all' && id === 'filter-all') || (filter === 'movie' && id === 'filter-movies') || (filter === 'series' && id === 'filter-series')) {
+        btn.classList.remove('text-gray-300','font-medium');
+        btn.classList.add('text-white','font-semibold');
+      } else {
+        btn.classList.remove('text-white','font-semibold');
+        btn.classList.add('text-gray-300','font-medium');
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    filterResults('all');
+  });
+</script>
+{% endblock %}

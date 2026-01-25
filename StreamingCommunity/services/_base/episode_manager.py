@@ -316,7 +316,6 @@ def display_episodes_list(episodes_manager) -> str:
     # Populate the table with episodes information
     for i, media in enumerate(episodes_manager):
         name = media.get('name') if isinstance(media, dict) else getattr(media, 'name', None)
-        number = media.get('number') if isinstance(media, dict) else getattr(media, 'number', None)
         duration = media.get('duration') if isinstance(media, dict) else getattr(media, 'duration', None)
         category = media.get('category') if isinstance(media, dict) else getattr(media, 'category', None)
 
