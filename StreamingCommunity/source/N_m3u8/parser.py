@@ -30,13 +30,13 @@ class LogParser:
         
         if 'WARN' in line.upper(): 
             self.warnings.append(line)
-            if self.show_warnings and 'Response' in line:
-                console.print(f"N_M3U8[yellow]{line.split('WARN',1)[1].strip()}")
+            if self.show_warnings and 'Response' in str(line):
+                console.print(f"N_M3U8[yellow]{line}")
 
         if 'ERROR' in line.upper():
             self.errors.append(line)
             if self.show_errors:
-                console.print(f"N_M3U8[red]{line.split('ERROR',1)[1].strip()}")
+                console.print(f"N_M3U8[red] {line}")
 
         return 'WARN' in line.upper(), 'ERROR' in line.upper()
 
