@@ -1,4 +1,4 @@
-# 06-06-25 By @FrancescoGrazioso -> "https://github.com/FrancescoGrazioso"
+﻿# 06-06-25 By @FrancescoGrazioso -> "https://github.com/FrancescoGrazioso"
 
 
 import time
@@ -22,7 +22,7 @@ from GUI.searchapp.api.base import MediaItem
 
 
 # CLI utilities
-from StreamingCommunity.utils.tracker import download_tracker, context_tracker
+from StreamingCommunity.source.utils.tracker import download_tracker, context_tracker
 
 
 def _media_item_to_display_dict(item: MediaItem, source_alias: str) -> Dict[str, Any]:

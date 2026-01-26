@@ -14,6 +14,7 @@
         "add_siteName": false
     },
     "M3U8_DOWNLOAD": {
+        "auto_select": true,
         "thread_count": 8,
         "retry_count": 30,
         "concurrent_download": true,

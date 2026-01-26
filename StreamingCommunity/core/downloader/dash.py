@@ -14,9 +14,9 @@ from rich.console import Console
 
 # Internal utilities
 from StreamingCommunity.utils.http_client import get_headers
-from StreamingCommunity.utils.tracker import context_tracker
 from StreamingCommunity.core.processors import join_video, join_audios, join_subtitles
-from StreamingCommunity.core.downloader.media_players import MediaPlayers
+from StreamingCommunity.source.utils.tracker import context_tracker
+from StreamingCommunity.source.utils.media_players import MediaPlayers
 from StreamingCommunity.utils import config_manager, os_manager, internet_manager
 
 

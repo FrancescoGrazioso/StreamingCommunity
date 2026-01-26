@@ -159,45 +159,54 @@ class OsManager:
 
 
 class InternetManager():
-    def format_file_size(self, size_bytes: float) -> str:
-        """
-        Formats a file size from bytes into a human-readable string representation.
+    def format_file_size(self, size_bytes) -> str:
+        """Formats a file size from bytes into a human-readable string representation."""
+        if isinstance(size_bytes, str):
+            try:
+                size_str = str(size_bytes).upper().strip()
+                if 'GB' in size_str:
+                    return int(float(size_str.replace('GB', '')) * 1024 * 1024 * 1024)
+                elif 'MB' in size_str:
+                    return int(float(size_str.replace('MB', '')) * 1024 * 1024)
+                elif 'KB' in size_str:
+                    return int(float(size_str.replace('KB', '')) * 1024)
+                elif 'B' in size_str:
+                    return int(float(size_str.replace('B', '')))
+                return None
+            except Exception:
+                return None
+        
+        elif isinstance(size_bytes, float) or isinstance(size_bytes, int):
+            if size_bytes <= 0:
+                return "0B"
 
-        Parameters:
-            size_bytes (float): Size in bytes to be formatted.
-
-        Returns:
-            str: Formatted string representing the file size with appropriate unit (B, KB, MB, GB, TB).
-        """
-        if size_bytes <= 0:
-            return "0B"
-
-        units = ['B', 'KB', 'MB', 'GB', 'TB']
-        unit_index = 0
-
-        while size_bytes >= 1024 and unit_index < len(units) - 1:
-            size_bytes /= 1024
-            unit_index += 1
-
-        return f"{size_bytes:.2f} {units[unit_index]}"
+            units = ['B', 'KB', 'MB', 'GB', 'TB']
+            unit_index = 0
+            while size_bytes >= 1024 and unit_index < len(units) - 1:
+                size_bytes /= 1024
+                unit_index += 1
+            return f"{size_bytes:.2f} {units[unit_index]}"
 
     def format_transfer_speed(self, bytes: float) -> str:
-        """
-        Formats a transfer speed from bytes per second into a human-readable string representation.
-
-        Parameters:
-            bytes (float): Speed in bytes per second to be formatted.
-
-        Returns:
-            str: Formatted string representing the transfer speed with appropriate unit (Bytes/s, KB/s, MB/s).
-        """
-        if bytes < 1024:
-            return f"{bytes:.2f} Bytes/s"
-        elif bytes < 1024 * 1024:
-            return f"{bytes / 1024:.2f} KB/s"
-        else:
-            return f"{bytes / (1024 * 1024):.2f} MB/s"
+        """Formats a transfer speed from bytes per second into a human-readable string representation."""
+        if isinstance(bytes, float):
+            if bytes < 1024:
+                return f"{bytes:.2f} Bytes/s"
+            elif bytes < 1024 * 1024:
+                return f"{bytes / 1024:.2f} KB/s"
+            else:
+                return f"{bytes / (1024 * 1024):.2f} MB/s"
         
+        elif isinstance(bytes, int):
+            if bytes >= 1024 * 1024 * 1024:
+                return f"{bytes/(1024*1024*1024):.2f} GB"
+            elif bytes >= 1024 * 1024:
+                return f"{bytes/(1024*1024):.2f} MB"
+            elif bytes >= 1024:
+                return f"{bytes/1024:.2f} KB"
+            else:
+                return f"{bytes} B"
+            
     def format_time(self, seconds: float, add_hours: bool = False) -> str:
         """Format seconds to MM:SS or HH:MM:SS"""
         if seconds < 0 or seconds == float('inf'):

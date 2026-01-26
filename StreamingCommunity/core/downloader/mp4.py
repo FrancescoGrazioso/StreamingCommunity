@@ -106,6 +106,38 @@ def MP4_Downloader(url: str, path: str, referer: str = None, headers_: dict = No
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
     with create_client() as client:
+        try:
+            head = client.head(url, headers=headers, timeout=REQUEST_TIMEOUT)
+            head.raise_for_status()
+            content_type = (head.headers.get('content-type') or '').lower()
+        except Exception:
+            content_type = ''
+
+        # If HEAD indicates HTML/JSON, attempt a GET without Range/If-Range as fallback
+        if 'text/html' in content_type or 'application/json' in content_type:
+            console.print('[yellow]HEAD indicates non-video; retrying GET without Range/If-Range...')
+
+            try:
+                resp_check = client.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
+                resp_check.raise_for_status()
+                preview_text = None
+
+                try:
+                    preview = resp_check.content[:2000]
+                    preview_text = preview.decode('utf-8', errors='replace')
+                except Exception:
+                    preview_text = '<could not read body>'
+                    return None, False
+                
+                console.print("\n[red]--- body preview ---")
+                console.print(preview_text)
+                return None, False
+
+            except Exception as e:
+                console.print(f"[red]Fallback GET failed: {e}")
+                return None, False
+
+        # Open the streaming response using the effective headers
         with client.stream("GET", url, headers=headers) as response:
             response.raise_for_status()
 

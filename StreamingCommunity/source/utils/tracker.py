@@ -1,4 +1,4 @@
-# 23-01-26 By GitHub Copilot
+# 23-01-26
 
 import time
 import threading

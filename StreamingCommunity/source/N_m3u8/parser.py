@@ -10,7 +10,7 @@ from rich.console import Console
 
 
 # Logic
-from .object import StreamInfo 
+from ..utils.object import StreamInfo 
 
 
 # Variable

@@ -2,6 +2,7 @@ httpx
 bs4
 rich
 unidecode
+readchar
 curl_cffi
 jsbeautifier
 pathvalidate
