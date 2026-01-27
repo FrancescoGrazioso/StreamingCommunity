@@ -1,7 +1,6 @@
 # 24.01.26
 
 # External libraries
-import readchar
 from rich.table import Table
 from rich.console import Console
 from rich.live import Live
@@ -9,7 +8,7 @@ from rich import box
 
 
 # Internal utilities
-from StreamingCommunity.utils import internet_manager
+from StreamingCommunity.utils import internet_manager, get_key
 
 
 def build_table(streams, selected: set, cursor: int, window_size: int = 12, highlight_cursor: bool = True):
@@ -86,23 +85,26 @@ def run_selector(streams, selected: set, cursor: int, window_size: int, toggle_c
         last_selected = set(state['selected'])
 
         while True:
-            key = readchar.readkey()
+            key = get_key()
+            
+            if key is None:
+                continue
 
-            if key == readchar.key.UP:
+            if key == 'UP':
                 state['cursor'] = (state['cursor'] - 1) % len(streams)
-            elif key == readchar.key.DOWN:
+            elif key == 'DOWN':
                 state['cursor'] = (state['cursor'] + 1) % len(streams)
-            elif key == ' ' or key == readchar.key.RIGHT:
+            elif key == 'SPACE' or key == 'RIGHT':
                 try:
                     toggle_callback(state)
                 except Exception:
                     pass
-            elif key == readchar.key.LEFT:
+            elif key == 'LEFT':
                 if state['cursor'] in state['selected']:
                     state['selected'].remove(state['cursor'])
-            elif key == "\r":
+            elif key == 'ENTER':
                 return sorted(list(state['selected']))
-            elif key == readchar.key.ESC:
+            elif key == 'ESC':
                 return None
 
             if state['cursor'] != last_cursor or state['selected'] != last_selected:

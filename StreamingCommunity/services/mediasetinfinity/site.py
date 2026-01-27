@@ -72,12 +72,26 @@ def title_search(query: str) -> int:
                     date = datetime.fromisoformat(str(updated).replace("Z", "+00:00")).year
                 except Exception:
                     date = ''
+        
+        # Get poster image
+        images = item.get("cardImages", [])
+        vertical_image = None
 
+        for img in images:
+            if img.get("sourceType") == "image_vertical" or img.get("type") == "image_vertical":
+                vertical_image = img
+                break
+    
+        image_base_url = "https://img-prod-api2.mediasetplay.mediaset.it/api/images"
+        image_url = f"{image_base_url}/{vertical_image.get('engine', 'mse')}/v5/ita/{vertical_image.get('id', '')}/image_vertical/300/450"
+        if vertical_image.get("r", ""):
+            image_url += f"?r={vertical_image.get('r', '')}"
+        
         media_search_manager.add_media({
             "id": item.get("guid", ""),
             "name": item.get("cardTitle", "No Title"),
             "type": item_type,
-            "image": None,
+            "image": image_url,
             "date": date if date not in ("", None) else "1999",
             "url": item.get("cardLink", {}).get("value", "")
         })

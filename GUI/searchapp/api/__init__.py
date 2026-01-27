@@ -6,16 +6,23 @@ from .base import BaseStreamingAPI
 
 
 # Import APi
-from .streamingcommunity import StreamingCommunityAPI
+from .altadefinizione import AltadefinzioneAPI
 from .animeunity import AnimeUnityAPI
-from .raiplay import RaiPlayAPI
+from .discoveryeu import DiscoveryEUAPI
 from .mediasetinfinity import MediasetInfinityAPI
+from .raiplay import RaiPlayAPI
+from .realtime import RealtimeAPI
+from .streamingcommunity import StreamingCommunityAPI
+
 
 _API_REGISTRY: Dict[str, type] = {
     'streamingcommunity': StreamingCommunityAPI,
+    'altadefinizione': AltadefinzioneAPI,
     'animeunity': AnimeUnityAPI,
+    'discoveryeu': DiscoveryEUAPI,
+    'mediasetinfinity': MediasetInfinityAPI,
     'raiplay': RaiPlayAPI,
-    'mediasetinfinity': MediasetInfinityAPI
+    'realtime': RealtimeAPI
 }
 
 

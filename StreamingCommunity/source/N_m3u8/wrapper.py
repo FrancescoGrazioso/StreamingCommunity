@@ -43,8 +43,8 @@ retry_count = config_manager.config.get_int("M3U8_DOWNLOAD", "retry_count")
 request_timeout = config_manager.config.get_int("REQUESTS", "timeout")
 thread_count = config_manager.config.get_int("M3U8_DOWNLOAD", "thread_count")
 real_time_decryption = config_manager.config.get_bool("M3U8_DOWNLOAD", "real_time_decryption")
-USE_PROXY = bool(config_manager.config.get_bool("REQUESTS", "use_proxy"))
-CONF_PROXY = config_manager.config.get_dict("REQUESTS", "proxy") or {}
+use_proxy = config_manager.config.get_bool("REQUESTS", "use_proxy")
+configuration_proxy = config_manager.config.get_dict("REQUESTS", "proxy", default={})
 
 
 class MediaDownloader:
@@ -58,46 +58,30 @@ class MediaDownloader:
         self.decrypt_preference = decrypt_preference.strip().lower()
         self.download_id = download_id
         self.site_name = site_name
-
-        # Track in GUI if ID is provided
-        if self.download_id:
-            download_tracker.start_download(
-                self.download_id, 
-                self.filename, 
-                self.site_name or "Unknown"
-            )
-
-        # Initialize other attributes
         self.streams = []
         self.external_subtitles = []
-        self.force_best_video = False           # Flag to force best video if no video selected
+        self.force_best_video = False
         self.meta_json_path, self.meta_selected_path, self.raw_m3u8, self.raw_mpd = None, None, None, None 
         self.status = None
         self.manifest_type = "Unknown"
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.output_dir_type = "Movie" if config_manager.config.get("OUT_FOLDER", "movie_folder_name") in str(self.output_dir) else "TV" if config_manager.config.get("OUT_FOLDER", "serie_folder_name") in str(self.output_dir) else "Anime" if config_manager.config.get("OUT_FOLDER", "anime_folder_name") in str(self.output_dir) else "other"
+
+        # Track in GUI if ID is provided
+        if self.download_id:
+            download_tracker.start_download(self.download_id, self.filename, self.site_name or "Unknown", self.output_dir_type)
 
     def _normalize_filter(self, filter_value: str) -> str:
         """Normalize filter ensuring values are quoted if they contain special characters"""
         if not filter_value:
             return filter_value
         
-        # Split by colon, but only if not preceded by a backslash
-        parts = filter_value.split(':')
-        normalized_parts = []
-        special_chars = '|.*+?[]{}()^$'
-        
+        parts, normalized_parts, special_chars = filter_value.split(':'), [], '|.*+?[]{}()^$'
         for part in parts:
             if '=' in part:
                 key, val = part.split('=', 1)
-
-                # Remove any existing quotes
                 val = val.strip("'\"")
-                
-                # If contains special characters, ensure double quotes
-                if any(c in val for c in special_chars):
-                    normalized_parts.append(f'{key}="{val}"')
-                else:
-                    normalized_parts.append(f'{key}={val}')
+                normalized_parts.append(f'{key}="{val}"' if any(c in val for c in special_chars) else f'{key}={val}')
             else:
                 normalized_parts.append(part)
         
@@ -107,16 +91,14 @@ class MediaDownloader:
         """Get common command line arguments for N_m3u8DL-RE"""
         cmd = []
         if self.headers:
-            for k, v in self.headers.items():
-                cmd.extend(["--header", f"{k}: {v}"])
+            cmd.extend([item for k, v in self.headers.items() for item in ["--header", f"{k}: {v}"]])
 
-        if self.cookies:
-            if cookie_str := "; ".join(f"{k}={v}" for k, v in self.cookies.items()):
-                cmd.extend(["--header", f"Cookie: {cookie_str}"])
+        if self.cookies and (cookie_str := "; ".join(f"{k}={v}" for k, v in self.cookies.items())):
+            cmd.extend(["--header", f"Cookie: {cookie_str}"])
 
-        if USE_PROXY and (proxy_url := CONF_PROXY.get("https") or CONF_PROXY.get("http")):
+        if use_proxy and (proxy_url := configuration_proxy.get("https") or configuration_proxy.get("http")):
             cmd.extend(["--use-system-proxy", "false", "--custom-proxy", proxy_url])
-
+        
         cmd.extend(["--force-ansi-console", "--no-ansi-color"])
         return cmd
     
@@ -124,11 +106,62 @@ class MediaDownloader:
         """Determine decryption tool based on preference and availability"""
         if self.decrypt_preference == "bento4":
             return get_bento4_decrypt_path()
-        elif self.decrypt_preference == "shaka":
+        if self.decrypt_preference == "shaka":
             return get_shaka_packager_path()
-        else:
-            console.log(f"[yellow]Unknown decryption preference '{self.decrypt_preference}'; defaulting to Bento4")
-            return get_bento4_decrypt_path()
+
+    def _match_external_subtitle_lang(self, ext_lang: str) -> bool:
+        """Check if external subtitle language matches filter"""
+        if not ext_lang or not subtitle_filter:
+            return False
+        
+        try:
+            if lang_match := re.search(r"lang=['\"]([^'\"]+)['\"]", subtitle_filter):
+                return any(t.lower() == ext_lang.lower() or ext_lang.lower().startswith(t.lower()) or t.lower() in ext_lang.lower() for t in [x.strip() for x in lang_match.group(1).split('|') if x.strip()])
+            return any(t.lower() in ext_lang.lower() for t in re.findall(r"[A-Za-z]{2,}", subtitle_filter))
+        except Exception:
+            return False
+
+    def _build_custom_filters(self, selected):
+        """Build custom filters from selected tracks"""
+        video = next((s for s in selected if s.type.lower().startswith('video')), None)
+        audios = [s for s in selected if s.type.lower().startswith('audio')]
+        subs = [s for s in selected if s.type.lower().startswith('subtitle')]
+
+        def build_video(s):
+            f = [f"res={s.resolution}"] if getattr(s, 'resolution', None) else []
+            f += [f"codecs={s.codec}"] if getattr(s, 'codec', None) else []
+            return ':'.join(f + ["for=best"])
+
+        def build_audio(tracks):
+            filters = []
+            for s in tracks:
+                f = [f"lang={s.language}"] if getattr(s, 'language', None) else []
+                f += [f"codecs={s.codec}"] if getattr(s, 'codec', None) else []
+                
+                if getattr(s, 'bandwidth', None):
+                    bw = s.bandwidth.replace(' Kbps', '').replace(' Mbps', '').strip()
+                    try:
+                        bw_val = int(float(bw) * 1000) if 'Mbps' in s.bandwidth else int(float(bw))
+                        f += [f"bwMin={bw_val}", f"bwMax={bw_val}"]
+                    except (ValueError, AttributeError):
+                        pass
+                
+                if f:
+                    filters.append(':'.join(f))
+            return ':'.join(filters) + ':for=all' if filters else "for=all"
+
+        def build_subtitle(tracks):
+            langs = [s.language for s in tracks if getattr(s, 'language', None)]
+            return f"lang='{'|'.join(langs)}':for=all" if langs else "for=all"
+
+        custom = {}
+        if video:
+            custom['video'] = build_video(video)
+        if audios:
+            custom['audio'] = build_audio(audios)
+        if subs:
+            custom['subtitle'] = build_subtitle(subs)
+        return custom if custom else None
 
     def parser_stream(self) -> List[StreamInfo]:
         """Analyze playlist and display table of available streams"""
@@ -137,41 +170,28 @@ class MediaDownloader:
         
         # Normalize filter values
         filters = getattr(self, 'custom_filters', None)
-        normalized_video = self._normalize_filter(filters['video']) if filters and filters.get('video') else self._normalize_filter(video_filter)
-        normalized_audio = self._normalize_filter(filters['audio']) if filters and filters.get('audio') else self._normalize_filter(audio_filter)
-        normalized_subtitle = self._normalize_filter(filters['subtitle']) if filters and filters.get('subtitle') else self._normalize_filter(subtitle_filter)
+        norm_v = self._normalize_filter(filters['video'] if filters and filters.get('video') else video_filter)
+        norm_a = self._normalize_filter(filters['audio'] if filters and filters.get('audio') else audio_filter)
+        norm_s = self._normalize_filter(filters['subtitle'] if filters and filters.get('subtitle') else subtitle_filter)
         
-        cmd = [
-            get_n_m3u8dl_re_path(),
-            "--write-meta-json",
-            "--no-log",
-            "--save-dir", str(analysis_path),
-            "--tmp-dir", str(analysis_path),
-            "--save-name", "temp_analysis",
-            "--select-video", normalized_video,
-            "--select-audio", normalized_audio,
-            "--select-subtitle", normalized_subtitle,
-            "--skip-download"
-        ]
+        cmd = [get_n_m3u8dl_re_path(), "--write-meta-json", "--no-log", "--save-dir", str(analysis_path), "--tmp-dir", str(analysis_path),
+               "--save-name", "temp_analysis", "--select-video", norm_v, "--select-audio", norm_a, "--select-subtitle", norm_s, "--skip-download"]
         cmd.extend(self._get_common_args())
         cmd.append(self.url)
 
         console.print("[cyan]Analyzing playlist...")
-        log_parser = LogParser()
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors='replace', bufsize=1, universal_newlines=True)
         
         # Save parsing log
         log_path = self.output_dir / f"{self.filename}_parsing.log"
         with open(log_path, 'w', encoding='utf-8', errors='replace') as log_file:
             log_file.write(f"Command: {' '.join(cmd)}\n{'='*80}\n\n")
-            
+            log_parser = LogParser()
             for line in proc.stdout:
-                line = line.rstrip()
-                if line.strip():
+                if line := line.rstrip():
                     log_parser.parse_line(line)
                     log_file.write(line + "\n")
                     log_file.flush()
-            
             proc.wait()
         
         analysis_dir = analysis_path / "temp_analysis"
@@ -181,17 +201,12 @@ class MediaDownloader:
         self.raw_mpd = analysis_dir / "raw.mpd"
         
         # Determine manifest type
-        self.manifest_type = "Unknown"
-        if self.raw_mpd.exists():
-            self.manifest_type = "DASH"
-        elif self.raw_m3u8.exists():
-            self.manifest_type = "HLS"
+        self.manifest_type = "DASH" if self.raw_mpd.exists() else "HLS" if self.raw_m3u8.exists() else "Unknown"
         
         if self.meta_json_path.exists():
             self.streams = parse_meta_json(str(self.meta_json_path), str(self.meta_selected_path))
 
-            # If there are video streams but none were selected by the configured filter,
-            # force `--select-video best` for the actual download to avoid downloading nothing.
+            # Check if video needs to be forced
             try:
                 has_video = any(s.type == "Video" for s in self.streams)
                 video_selected = any(s.type == "Video" and s.selected for s in self.streams)
@@ -203,91 +218,25 @@ class MediaDownloader:
 
             # Add external subtitles to stream list
             for ext_sub in self.external_subtitles:
-
-                # Determine selection for external subtitles based on `subtitle_filter` from config
                 ext_lang = ext_sub.get('language', '') or ''
-                selected = False
-                try:
-
-                    # Try to extract language tokens from the selection filter, e.g. lang='ita|eng|it|en'
-                    lang_match = re.search(r"lang=['\"]([^'\"]+)['\"]", subtitle_filter or "")
-                    if lang_match:
-                        tokens = [t.strip() for t in lang_match.group(1).split('|') if t.strip()]
-                        for t in tokens:
-                            tl = t.lower()
-                            el = ext_lang.lower()
-
-                            # match exact, prefix (en -> en-US), or contained token
-                            if not el:
-                                continue
-                            if tl == el or el.startswith(tl) or tl in el:
-                                selected = True
-                                break
-                    
-                    else:
-                        # Fallback: try to match any simple alpha tokens found in the filter
-                        simple_tokens = re.findall(r"[A-Za-z]{2,}", subtitle_filter or "")
-                        for t in simple_tokens:
-                            if t.lower() in ext_lang.lower():
-                                selected = True
-                                break
-                
-                except Exception:
-                    selected = False
-
-                # Persist selection and extension back to the external subtitle dict
+                selected = self._match_external_subtitle_lang(ext_lang)
                 ext_type = ext_sub.get('type') or ext_sub.get('format') or 'srt'
                 ext_sub['_selected'] = selected
                 ext_sub['_ext'] = ext_type
+                self.streams.append(StreamInfo(type_="Subtitle [red]*EXT", language=ext_sub.get('language', ''), name=ext_sub.get('name', ''), selected=selected, extension=ext_type))
 
-                self.streams.append(StreamInfo(
-                    type_="Subtitle [red]*EXT",
-                    language=ext_sub.get('language', ''),
-                    name=ext_sub.get('name', ''),
-                    selected=selected,
-                    extension=ext_type
-                ))
-
-            # Get total pre-selected count
+            # Interactive track selection
             if not auto_select_cfg and self.streams:
                 try:
-                    # Suppress static table while interactive selector is active
                     self.suppress_display = True
                     selector = TrackSelector(self.streams)
-
-                    # Live selector: show a windowed view (first 10 rows + ...), not the full table
                     selector.window_size = min(10, len(self.streams)) or 1
-                    selected = selector.run()
-                    if selected:
-                        video = next((s for s in selected if s.type.lower().startswith('video')), None)
-                        audios = [s for s in selected if s.type.lower().startswith('audio')]
-                        subs = [s for s in selected if s.type.lower().startswith('subtitle')]
-
-                        def build_video_filter(s):
-                            f = []
-                            if getattr(s, 'resolution', None):
-                                f.append(f"res={s.resolution}")
-                            if getattr(s, 'codec', None):
-                                f.append(f"codecs={s.codec}")
-                            f.append("for=best")
-                            return ':'.join(f)
-
-                        def build_lang_filter(tracks):
-                            langs = [s.language for s in tracks if getattr(s, 'language', None)]
-                            if langs:
-                                return f"lang='{'|'.join(langs)}':for=all"
-                            return "for=all"
-
-                        custom_filters = {
-                            'video': build_video_filter(video) if video else None,
-                            'audio': build_lang_filter(audios) if audios else None,
-                            'subtitle': build_lang_filter(subs) if subs else None
-                        }
-                        self.custom_filters = custom_filters
+                    if selected := selector.run():
+                        self.custom_filters = self._build_custom_filters(selected)
                 except Exception as e:
                     console.log(f"[yellow]Interactive selector failed: {e}[/yellow]")
 
-            # Show full table (no truncation) for static display unless suppressed
+            # Show table unless suppressed
             if not getattr(self, 'suppress_display', False):
                 try:
                     selected_set = {i for i, s in enumerate(self.streams) if getattr(s, 'selected', False)}
@@ -316,83 +265,45 @@ class MediaDownloader:
         async with httpx.AsyncClient(headers=self.headers, timeout=request_timeout) as client:
             for sub in self.external_subtitles:
                 try:
-                    # Skip external subtitles that were marked as not selected (default: True)
                     if not sub.get('_selected', True):
                         continue
 
-                    url = sub['url']
-                    lang = sub.get('language', 'unknown')
-
-                    # Prefer previously resolved extension, then explicit 'type', then 'format', then fallback 'srt'
+                    url, lang = sub['url'], sub.get('language', 'unknown')
                     sub_type = sub.get('_ext') or sub.get('type') or sub.get('format') or 'srt'
-
-                    # Create filename
-                    sub_filename = f"{self.filename}.{lang}.{sub_type}"
-                    sub_path = self.output_dir / sub_filename
-                    
-                    # Download
+                    sub_path = self.output_dir / f"{self.filename}.{lang}.{sub_type}"
                     response = await client.get(url)
                     response.raise_for_status()
-                    
-                    # Save
+
                     with open(sub_path, 'wb') as f:
                         f.write(response.content)
-                    
-                    downloaded.append({
-                        'path': str(sub_path),
-                        'language': lang,
-                        'type': sub_type,
-                        'size': len(response.content)
-                    })
-                    
+                    downloaded.append({'path': str(sub_path), 'language': lang, 'type': sub_type, 'size': len(response.content)})
+
                 except Exception as e:
                     console.log(f"[red]Failed to download external subtitle: {e}[/red]")
-        
         return downloaded
 
     def start_download(self) -> Dict[str, Any]:
-        """Start the download process with automatic retry on segment count mismatch"""
-        cmd = [get_n_m3u8dl_re_path()]
-        log_parser = LogParser()
+        """Start the download process"""
         filters = getattr(self, 'custom_filters', None)
-        select_video = ("best" if getattr(self, "force_best_video", False) else (filters['video'] if filters and filters.get('video') else video_filter))
         
-        if filters is not None and 'video' in filters:
-            normalized_video = self._normalize_filter(filters['video']) if filters.get('video') else None
-        else:
-            normalized_video = self._normalize_filter(select_video)
+        # Determine filters
+        norm_v = self._normalize_filter(filters['video'] if filters and 'video' in filters else ("best" if getattr(self, "force_best_video", False) else video_filter))
+        norm_a = self._normalize_filter(filters['audio'] if filters and 'audio' in filters else audio_filter)
+        norm_s = self._normalize_filter(filters['subtitle'] if filters and 'subtitle' in filters else subtitle_filter)
 
-        if filters is not None and 'audio' in filters:
-            normalized_audio = self._normalize_filter(filters['audio']) if filters.get('audio') else None
-        else:
-            normalized_audio = self._normalize_filter(audio_filter)
-
-        if filters is not None and 'subtitle' in filters:
-            normalized_subtitle = self._normalize_filter(filters['subtitle']) if filters.get('subtitle') else None
-        else:
-            normalized_subtitle = self._normalize_filter(subtitle_filter)
-
-        if normalized_video is None:
-            normalized_video = self._normalize_filter(select_video)
-
-        # Options
-        cmd.extend(["--save-name", self.filename])
-        cmd.extend(["--save-dir", str(self.output_dir)])
-        cmd.extend(["--tmp-dir", str(self.output_dir)])
-        cmd.extend(["--ffmpeg-binary-path", get_ffmpeg_path()])
-        cmd.extend(["--decryption-binary-path", self.determine_decryption_tool()])
-        cmd.extend(["--no-log"])
-        cmd.extend(["--write-meta-json", "false"])
-        cmd.extend(["--binary-merge"])
-        cmd.extend(["--del-after-done"])
-        cmd.extend(["--select-video", normalized_video])
-        if normalized_audio is not None:
-            cmd.extend(["--select-audio", normalized_audio])
-        if normalized_subtitle is not None:
-            cmd.extend(["--select-subtitle", normalized_subtitle])
-        cmd.extend(["--auto-subtitle-fix", "false"])        # CON TRUE ALCUNE VOLTE NON SCARICATA TUTTI I SUB SELEZIONATI
+        # Build command
+        cmd = [get_n_m3u8dl_re_path(), "--save-name", self.filename, "--save-dir", str(self.output_dir), "--tmp-dir", str(self.output_dir),
+               "--ffmpeg-binary-path", get_ffmpeg_path(), "--decryption-binary-path", self.determine_decryption_tool(),
+               "--no-log", "--write-meta-json", "false", "--binary-merge", "--del-after-done", "--select-video", norm_v]
+        
+        if norm_a:
+            cmd.extend(["--select-audio", norm_a])
+        if norm_s:
+            cmd.extend(["--select-subtitle", norm_s])
+        cmd.extend(["--auto-subtitle-fix", "false"])
         cmd.extend(self._get_common_args())
 
+        # Add optional parameters
         if concurrent_download:
             cmd.append("--concurrent-download")
         if thread_count > 0:
@@ -409,8 +320,7 @@ class MediaDownloader:
             cmd.extend(["--mp4-real-time-decryption", "true"])
         
         if self.key:
-            keys = [self.key] if isinstance(self.key, str) else self.key
-            for single_key in keys:
+            for single_key in ([self.key] if isinstance(self.key, str) else self.key):
                 cmd.extend(["--key", single_key])
         
         cmd.append(self.url)
@@ -428,33 +338,22 @@ class MediaDownloader:
         with open(log_path, 'w', encoding='utf-8', errors='replace') as log_file:
             log_file.write(f"Command: {' '.join(cmd)}\n{'='*80}\n\n")
             
-            with Progress(
-                TextColumn("[purple]{task.description}", justify="left"),
-                CustomBarColumn(bar_width=40), ColoredSegmentColumn(),
-                TextColumn("[dim][[/dim]"), CompactTimeColumn(), TextColumn("[dim]<[/dim]"), CompactTimeRemainingColumn(), TextColumn("[dim]][/dim]"),
-                SizeColumn(),
-                TextColumn("[dim]@[/dim]"), TextColumn("[red]{task.fields[speed]}[/red]", justify="right"),
-                console=console,
-            ) as progress:
+            with Progress(TextColumn("[purple]{task.description}", justify="left"), CustomBarColumn(bar_width=40), ColoredSegmentColumn(),
+                         TextColumn("[dim][[/dim]"), CompactTimeColumn(), TextColumn("[dim]<[/dim]"), CompactTimeRemainingColumn(), TextColumn("[dim]][/dim]"),
+                         SizeColumn(), TextColumn("[dim]@[/dim]"), TextColumn("[red]{task.fields[speed]}[/red]", justify="right"), console=console) as progress:
                 tasks = {}
                 proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors='replace', bufsize=1, universal_newlines=True)
-
                 with proc:
                     for line in proc.stdout:
-                        line = line.rstrip()
-                        if not line:
+                        if not (line := line.rstrip()):
                             continue
-                        
+
                         if line.strip():
                             log_parser.parse_line(line)
-                        
                         log_file.write(line + "\n")
                         log_file.flush()
-                        
-                        # Parse for progress updates
                         self._parse_progress_line(line, progress, tasks, subtitle_sizes)
-                        
-                        # Check for segment count error
+
                         if "Segment count check not pass" in line:
                             console.log(f"[red]Segment count mismatch detected: {line}[/red]")
                     
@@ -472,77 +371,56 @@ class MediaDownloader:
     def _update_task(self, progress, tasks: dict, key: str, label: str, line: str):
         """Generic task update helper"""
         if key not in tasks:
-            tasks[key] = progress.add_task(
-                f"[yellow]{self.manifest_type} {label}",
-                total=100, segment="0/0", speed="0Bps", size="0B/0B"
-            )
+            tasks[key] = progress.add_task(f"[yellow]{self.manifest_type} {label}", total=100, segment="0/0", speed="0Bps", size="0B/0B")
+        
         task = tasks[key]
+        cur_segment, cur_percent, cur_speed, cur_size = None, None, None, None
 
-        cur_segment = None
-        cur_percent = None
-        cur_speed = None
-        cur_size = None
-
-        # 1) Update segments
-        if m := SEGMENT_RE.search(line): 
+        if m := SEGMENT_RE.search(line):
             cur_segment = m.group(0)
             progress.update(task, segment=cur_segment)
 
-        # 2) Update percentage
-        if m := PERCENT_RE.search(line): 
-            try: 
+        if m := PERCENT_RE.search(line):
+            try:
                 cur_percent = float(m.group(1))
                 progress.update(task, completed=cur_percent)
-            except Exception:  
+            except Exception:
                 pass
 
-        # 3) Update speed
-        if m := SPEED_RE.search(line): 
+        if m := SPEED_RE.search(line):
             cur_speed = m.group(1)
             progress.update(task, speed=cur_speed)
 
-        # 4) Update size
-        if m := SIZE_RE.search(line): 
+        if m := SIZE_RE.search(line):
             cur_size = f"{m.group(1)}/{m.group(2)}"
             progress.update(task, size=cur_size)
 
-        # Update global tracker with the values parsed from the current line
         if self.download_id:
             download_tracker.update_progress(self.download_id, key, cur_percent, cur_speed, cur_size, cur_segment)
-        
         return task
 
     def _parse_progress_line(self, line: str, progress, tasks: dict, subtitle_sizes: dict):
         """Parse a progress line and update progress bars"""
-        
-        # 1) Video progress
         if line.startswith("Vid"):
-            res = (VIDEO_LINE_RE.search(line).group(1) if VIDEO_LINE_RE.search(line) else 
-                  next((s.resolution or s.extension or "main" for s in self.streams if s.type == "Video"), "main"))
+            res = (VIDEO_LINE_RE.search(line).group(1) if VIDEO_LINE_RE.search(line) else next((s.resolution or s.extension or "main" for s in self.streams if s.type == "Video"), "main"))
             self._update_task(progress, tasks, f"video_{res}", f"[cyan]Vid [red]{res}", line)
 
-        # 2) Audio progress
         elif line.startswith("Aud"):
             if m := AUDIO_LINE_RE.search(line):
                 bitrate, lang_name = m.group(1).strip(), m.group(2).strip()
-                display = lang_name
-                if not any(c.isalpha() for c in lang_name):
-                    display = next((s.language or s.name or bitrate for s in self.streams if s.type == "Audio" and s.bandwidth and bitrate in s.bandwidth), bitrate)
+                display = lang_name if any(c.isalpha() for c in lang_name) else next((s.language or s.name or bitrate for s in self.streams if s.type == "Audio" and s.bandwidth and bitrate in s.bandwidth), bitrate)
                 self._update_task(progress, tasks, f"audio_{lang_name}_{bitrate}", f"[cyan]Aud [red]{display}", line)
 
-        # 3) Subtitle progress
         elif line.startswith("Sub"):
             if m := SUBTITLE_LINE_RE.search(line):
                 lang, name = m.group(1).strip(), m.group(2).strip()
                 task = self._update_task(progress, tasks, f"sub_{lang}_{name}", f"[cyan]Sub [red]{name}", line)
-                
-                # Special capture for final size
+
                 if fm := SUBTITLE_FINAL_SIZE_RE.search(line):
                     final_size = fm.group(1)
                     progress.update(task, size=final_size, completed=100)
                     subtitle_sizes[f"{lang}: {name}"] = final_size
-
-                # Also capture size if available
+                
                 elif not SIZE_RE.search(line):
                     if sm := re.search(r"(\d+\.\d+(?:B|KB|MB|GB))\s*$", line):
                         subtitle_sizes[f"{lang}: {name}"] = sm.group(1)
@@ -556,8 +434,8 @@ class MediaDownloader:
         """Get final download status"""
         status = {'video': None, 'audios': [], 'subtitles': [], 'external_subtitles': external_subs}
         exts = {
-            'video': ['.mp4', '.mkv', '.m4v', '.ts', '.mov', '.webm'],
-            'audio': ['.m4a', '.aac', '.mp3', '.ts', '.mp4', '.wav', '.webm'],
+            'video': ['.mp4', '.mkv', '.m4v', '.ts', '.mov', '.webm'], 
+            'audio': ['.m4a', '.aac', '.mp3', '.ts', '.mp4', '.wav', '.webm'], 
             'subtitle': ['.srt', '.vtt', '.ass', '.sub', '.ssa']
         }
         
@@ -568,22 +446,19 @@ class MediaDownloader:
                 break
         
         # Process downloaded subtitle metadata
-        downloaded_subs = []
-        for d_name, size_str in subtitle_sizes.items():
-            lang, name = d_name.split(':', 1) if ':' in d_name else (d_name, d_name)
-            lang, name = lang.strip(), name.strip()
-            
-            if sz := internet_manager.format_file_size(size_str):
-                downloaded_subs.append({'lang': lang, 'name': name, 'size': sz, 'used': False})
+        downloaded_subs = [{'lang': (d_name.split(':', 1)[0] if ':' in d_name else d_name).strip(), 
+                           'name': (d_name.split(':', 1)[1] if ':' in d_name else d_name).strip(),
+                           'size': sz, 'used': False} 
+                          for d_name, size_str in subtitle_sizes.items() 
+                          if (sz := internet_manager.format_file_size(size_str))]
 
-        def norm_lang(lang): 
+        def norm_lang(lang):
             return set(lang.lower().replace('-', '.').split('.'))
-        
-        seen_langs = {} # Track seen language codes during scanning to handle duplicates
+        seen_langs = {}
 
         # Scan files
         for f in sorted(list(self.output_dir.iterdir())):
-            if not f.is_file(): 
+            if not f.is_file():
                 continue
             
             # Audio
@@ -600,42 +475,29 @@ class MediaDownloader:
                 f_size = f.stat().st_size
                 best_sub, min_diff = None, float('inf')
                 
-                # 1. Try to find the best match based on size and language tokens
+                # Find best match
                 f_lang_tokens = norm_lang(ext_lang)
                 for sub in downloaded_subs:
-                    if sub.get('used'): 
+                    if sub.get('used'):
                         continue
-                    
+
                     s_lang_tokens = norm_lang(sub['lang'])
                     overlap = f_lang_tokens & s_lang_tokens
                     diff = abs(sub['size'] - f_size)
-                    
                     if (not f_lang_tokens or not s_lang_tokens or overlap) or not downloaded_subs:
                         if diff < min_diff and diff <= 2048:
                             min_diff, best_sub = diff, sub
                 
-                # 2. Determine display name
+                # Determine display name
                 if best_sub:
                     lang, name = best_sub['lang'], best_sub['name']
                     best_sub['used'] = True
-                    
-                    # If we've already seen this exact language code, use Language - Name
-                    if seen_langs.get(lang):
-                        final_name = f"{lang} - {name}" if name and name != lang else lang
-                    else:
-                        # First occurrence: always use the Language code
-                        final_name = lang
-                    
+                    final_name = f"{lang} - {name}" if seen_langs.get(lang) and name and name != lang else lang
                     seen_langs[lang] = seen_langs.get(lang, 0) + 1
                 else:
                     final_name = ext_lang
 
-                status['subtitles'].append({
-                    'path': str(f), 
-                    'language': final_name, 
-                    'name': final_name, 
-                    'size': f_size
-                })
+                status['subtitles'].append({'path': str(f), 'language': final_name, 'name': final_name, 'size': f_size})
         
         return status
     

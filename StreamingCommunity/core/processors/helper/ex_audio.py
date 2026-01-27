@@ -4,7 +4,6 @@ import sys
 import json
 import subprocess
 import logging
-from typing import Tuple
 
 
 # External library
@@ -43,13 +42,6 @@ def get_video_duration(file_path: str, file_type: str = "file") -> float:
     except Exception as e:
         logging.error(f"Get {file_type} duration error: {e}, ffprobe path: {get_ffprobe_path()}, file path: {file_path}")
         sys.exit(0)
-
-
-def format_duration(seconds: float) -> Tuple[int, int, int]:
-    """Format duration in seconds into hours, minutes, and seconds."""
-    hours, remainder = divmod(seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    return int(hours), int(minutes), int(seconds)
 
 
 def check_duration_v_a(video_path, audio_path, tolerance=1.0):

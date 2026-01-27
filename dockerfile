@@ -1,10 +1,7 @@
 FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
-    build-essential \
-    libxml2-dev \
-    libxslt1-dev \
+    nano \
     libicu-dev \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
@@ -30,7 +27,7 @@ RUN mkdir -p /app/Video /app/logs /app/data \
 
 USER appuser
 
-ENV PYTHONPATH="/app: ${PYTHONPATH}" \
+ENV PYTHONPATH="/app:${PYTHONPATH}" \
     HOME=/home/appuser
 
 EXPOSE 8000

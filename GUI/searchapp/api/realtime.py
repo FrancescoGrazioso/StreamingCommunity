@@ -1,4 +1,4 @@
-# 06-06-25 By @FrancescoGrazioso -> "https://github.com/FrancescoGrazioso"
+# 27-01-26
 
 
 import importlib
@@ -10,32 +10,31 @@ from .base import BaseStreamingAPI, MediaItem, Season, Episode
 
 
 # External utilities
-from StreamingCommunity.utils import config_manager
 from StreamingCommunity.services._base.loader import get_folder_name
-from StreamingCommunity.services.streamingcommunity.util.ScrapeSerie import GetSerieInfo
+from StreamingCommunity.services.realtime.util.ScrapeSerie import GetSerieInfo
 
 
-class StreamingCommunityAPI(BaseStreamingAPI):
+class RealtimeAPI(BaseStreamingAPI):
     def __init__(self):
         super().__init__()
-        self.site_name = "streamingcommunity"
+        self.site_name = "realtime"
         self._load_config()
         self._search_fn = None
     
     def _load_config(self):
         """Load site configuration."""
-        self.base_url = config_manager.domain.get("streamingcommunity", "full_url")
+        self.base_url = "https://public.aurora.enhanced.live"
     
     def _get_search_fn(self):
         """Lazy load the search function."""
         if self._search_fn is None:
-            module = importlib.import_module(f"StreamingCommunity.{get_folder_name()}.streamingcommunity")
+            module = importlib.import_module(f"StreamingCommunity.{get_folder_name()}.realtime")
             self._search_fn = getattr(module, "search")
         return self._search_fn
     
     def search(self, query: str) -> List[MediaItem]:
         """
-        Search for content on StreamingCommunity.
+        Search for content on Realtime.
         
         Args:
             query: Search term
@@ -53,25 +52,23 @@ class StreamingCommunityAPI(BaseStreamingAPI):
                     item_dict = element.__dict__.copy() if hasattr(element, '__dict__') else {}
                     
                     media_item = MediaItem(
-                        id=item_dict.get('id'),
                         name=item_dict.get('name'),
-                        slug=item_dict.get('slug', ''),
                         type=item_dict.get('type'),
                         url=item_dict.get('url'),
                         poster=item_dict.get('image'),
-                        year=item_dict.get('year'),
-                        provider_language=item_dict.get('provider_language'),
+                        year=item_dict.get('date'),
                         raw_data=item_dict
                     )
                     results.append(media_item)
             
             return results
+        
         except Exception as e:
-            raise Exception(f"StreamingCommunity search error: {e}")
+            raise Exception(f"Realtime search error: {e}")
     
     def get_series_metadata(self, media_item: MediaItem) -> Optional[List[Season]]:
         """
-        Get seasons and episodes for a StreamingCommunity series.
+        Get seasons and episodes for a Realtime series.
         
         Args:
             media_item: MediaItem to get metadata for
@@ -79,26 +76,22 @@ class StreamingCommunityAPI(BaseStreamingAPI):
         Returns:
             List of Season objects, or None if not a series
         """
-        # Check if it's a movie
         if media_item.is_movie:
             return None
         
         try:
-            scraper = GetSerieInfo(
-                url=f"{self.base_url}{media_item.provider_language}",
-                media_id=media_item.id,
-                series_name=media_item.slug,
-                years=media_item.year
-            )
+            scrape_serie = GetSerieInfo(media_item.url)
+            scrape_serie.getNumberSeason()
+            seasons_count = len(scrape_serie.seasons_manager)
             
-            seasons_count = scraper.getNumberSeason()
             if not seasons_count:
+                print(f"[Realtime] No seasons found for: {media_item.name}")
                 return None
-            
+        
             seasons = []
             for season_num in range(1, seasons_count + 1):
                 try:
-                    episodes_raw = scraper.getEpisodeSeasons(season_num)
+                    episodes_raw = scrape_serie.getEpisodeSeasons(season_num)
                     episodes = []
                     
                     for idx, ep in enumerate(episodes_raw or [], 1):
@@ -111,8 +104,10 @@ class StreamingCommunityAPI(BaseStreamingAPI):
                     
                     season = Season(number=season_num, episodes=episodes)
                     seasons.append(season)
-
-                except Exception:
+                    print(f"[Realtime] Season {season_num}: {len(episodes)} episodes")
+                
+                except Exception as e:
+                    print(f"[Realtime] Error getting season {season_num}: {e}")
                     continue
             
             return seasons if seasons else None
@@ -122,7 +117,7 @@ class StreamingCommunityAPI(BaseStreamingAPI):
     
     def start_download(self, media_item: MediaItem, season: Optional[str] = None, episodes: Optional[str] = None) -> bool:
         """
-        Start downloading from StreamingCommunity.
+        Start downloading from Realtime.
         
         Args:
             media_item: MediaItem to download

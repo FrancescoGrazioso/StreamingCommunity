@@ -40,8 +40,7 @@ def download_film(select_title: MediaItem) -> str:
     # Prepare TMDB data 
     tmdb_data = None
     if use_other_api:
-        year = int(select_title.date[:4])
-        result = tmdb_client.get_type_and_id_by_slug_year(select_title.slug, year)
+        result = tmdb_client.get_type_and_id_by_slug_year(select_title.slug, select_title.year)
         
         if result and result.get('id') and result.get('type') == 'movie':
             tmdb_data = {'id': result.get('id')}

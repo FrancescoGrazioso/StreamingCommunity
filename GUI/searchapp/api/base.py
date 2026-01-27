@@ -18,6 +18,7 @@ class MediaItem:
     poster: Optional[str] = None
     release_date: Optional[str] = None
     year: Optional[int] = None
+    provider_language: Optional[str] = None
     raw_data: Optional[Dict[str, Any]] = None
     
     @property
@@ -35,7 +36,8 @@ class MediaItem:
             'release_date': self.release_date,
             'year': self.year,
             'raw_data': self.raw_data,
-            'is_movie': self.is_movie
+            'is_movie': self.is_movie,
+            'provider_language': self.provider_language
         }
 
 
@@ -162,5 +164,6 @@ class BaseStreamingAPI(ABC):
             poster=data.get('poster') or data.get('poster_url') or data.get('image'),
             release_date=data.get('release_date') or data.get('first_air_date'),
             year=data.get('year'),
+            provider_language=data.get('provider_language'),
             raw_data=data
         )

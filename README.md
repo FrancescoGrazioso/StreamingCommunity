@@ -123,6 +123,7 @@ Key configuration parameters in `config.json`:
 ```json
 {
     "M3U8_DOWNLOAD": {
+        "auto_select": true,
         "thread_count": 12,
         "retry_count": 40,
         "concurrent_download": true,
@@ -137,6 +138,7 @@ Key configuration parameters in `config.json`:
 ```
 
 #### Performance Settings
+- **`auto_select`**: If false user can manually select individual track (vid, aud, sub) if true auto apply selelt_video \ aud \ sub
 - **`thread_count`**: Number of parallel download threads (default: `12`)
 - **`retry_count`**: Maximum retry attempts for failed segments (default: `40`)
 - **`concurrent_download`**: Download video and audio simultaneously (default: `true`)
