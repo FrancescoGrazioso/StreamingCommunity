@@ -100,7 +100,7 @@ def title_search(query: str) -> int:
                     'name': attributes.get('name', 'No Title'),
                     'type': 'tv' if element_type == 'show' else 'movie',
                     'image': None,
-                    'date': date
+                    'year': date
                 })
                 
     return media_search_manager.get_length()

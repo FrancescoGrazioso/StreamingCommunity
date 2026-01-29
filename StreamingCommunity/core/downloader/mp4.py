@@ -24,7 +24,6 @@ from StreamingCommunity.source.N_m3u8 import CustomBarColumn
 msg = Prompt()
 console = Console()
 REQUEST_VERIFY = config_manager.config.get_bool('REQUESTS', 'verify')
-REQUEST_TIMEOUT = config_manager.config.get_float('REQUESTS', 'timeout')
 
 
 class InterruptHandler:
@@ -107,7 +106,7 @@ def MP4_Downloader(url: str, path: str, referer: str = None, headers_: dict = No
 
     with create_client() as client:
         try:
-            head = client.head(url, headers=headers, timeout=REQUEST_TIMEOUT)
+            head = client.head(url, headers=headers)
             head.raise_for_status()
             content_type = (head.headers.get('content-type') or '').lower()
         except Exception:
@@ -118,7 +117,7 @@ def MP4_Downloader(url: str, path: str, referer: str = None, headers_: dict = No
             console.print('[yellow]HEAD indicates non-video; retrying GET without Range/If-Range...')
 
             try:
-                resp_check = client.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
+                resp_check = client.get(url, headers=headers)
                 resp_check.raise_for_status()
                 preview_text = None
 

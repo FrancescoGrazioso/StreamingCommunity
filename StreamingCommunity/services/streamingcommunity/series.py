@@ -10,9 +10,8 @@ from rich.prompt import Prompt
 
 
 # Internal utilities
-from StreamingCommunity.utils import config_manager, start_message
+from StreamingCommunity.utils import config_manager, tmdb_client, start_message
 from StreamingCommunity.services._base import site_constants, MediaItem
-from StreamingCommunity.core.media import tmdb_client
 from StreamingCommunity.services._base.episode_manager import map_episode_title
 from StreamingCommunity.services._base.season_manager import process_season_selection, process_episode_download
 from StreamingCommunity.core.downloader import HLS_Downloader
@@ -56,7 +55,7 @@ def download_video(index_season_selected: int, index_episode_selected: int, scra
 
     if use_other_api:
         series_slug = scrape_serie.series_name.lower().replace(' ', '-').replace("'", '')
-        result = tmdb_client.get_type_and_id_by_slug_year(str(series_slug), int(scrape_serie.years))
+        result = tmdb_client.get_type_and_id_by_slug_year(str(series_slug), int(scrape_serie.year), 'tv')
         
         if result and result.get('id') and result.get('type') == 'tv':
             tmdb_id = result.get('id')

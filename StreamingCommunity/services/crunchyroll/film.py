@@ -41,7 +41,7 @@ def download_film(select_title: MediaItem) -> str:
     client = CrunchyrollClient()
 
     # Define filename and path
-    mp4_name = f"{os_manager.get_sanitize_file(select_title.name, select_title.date)}.{extension_output}"
+    mp4_name = f"{os_manager.get_sanitize_file(select_title.name, select_title.year)}.{extension_output}"
     mp4_path = os.path.join(site_constants.MOVIE_FOLDER, mp4_name.replace(f".{extension_output}", ""))
 
     # Extract media ID

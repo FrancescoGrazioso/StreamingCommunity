@@ -4,7 +4,6 @@
 import time
 import json
 import threading
-from datetime import datetime
 from typing import Any, Dict
 
 
@@ -34,36 +33,9 @@ def _media_item_to_display_dict(item: MediaItem, source_alias: str) -> Dict[str,
         'source_alias': source_alias,
         'bg_image_url': item.poster,
         'is_movie': item.is_movie,
+        'year': item.year,
     }
-    
-    # Format release date
-    display_release = None
-    if item.year:
-        display_release = str(item.year)
-    elif item.release_date:
-        try:
-            for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%Y/%m/%d', '%d-%m-%Y', '%Y'):
-                try:
-                    parsed_date = datetime.strptime(str(item.release_date)[:10], fmt)
-                    display_release = str(parsed_date.year)
-                    break
-
-                except Exception:
-                    continue
-
-            if not display_release:
-                try:
-                    display_release = str(int(str(item.release_date)[:4]))
-
-                except Exception:
-                    display_release = str(item.release_date)
-
-        except Exception:
-            pass
-    
-    result['display_release'] = display_release
     result['payload_json'] = json.dumps(item.to_dict())
-    
     return result
 
 

@@ -7,8 +7,11 @@ from typing import Optional, List, Dict, Tuple
 
 
 # External libraries
-from curl_cffi import requests
 from rich.console import Console
+
+
+# Internal utilities
+from StreamingCommunity.utils.http_client import create_client_curl
 
 
 # Variable
@@ -51,17 +54,16 @@ class DRMSystem:
 
 
 class MPDParser:
-    def __init__(self, mpd_url: str, headers: Dict[str, str] = None, timeout: int = 30):
+    def __init__(self, mpd_url: str, headers: Dict[str, str] = None):
         self.mpd_url = mpd_url
         self.headers = headers or {}
-        self.timeout = timeout
         self.root = None
         self.namespace_map = {}
     
     def parse(self) -> bool:
         """Parse MPD from URL."""
         try:
-            r = requests.get(self.mpd_url, headers=self.headers, timeout=self.timeout, impersonate="chrome142")
+            r = create_client_curl(headers=self.headers).get(self.mpd_url)
             r.raise_for_status()
             self.root = ET.fromstring(r.content)
             self._extract_namespaces()

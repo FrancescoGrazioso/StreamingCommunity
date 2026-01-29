@@ -57,7 +57,7 @@ def title_search(query: str) -> int:
             media_search_manager.add_media({
                 'name': dict_title.get('title'),
                 'type': 'tv',
-                'date': dict_title.get('dateLastModified').split('T')[0],
+                'year': dict_title.get('dateLastModified').split('-')[0],
                 'image': dict_title.get('image').get('url'),
                 'url': f'https://public.aurora.enhanced.live/site/page/{str(dict_title.get("slug")).lower().replace(" ", "-")}/?include=default&filter[environment]=foodnetwork&v=2&parent_slug={dict_title.get("parentSlug")}',
             })

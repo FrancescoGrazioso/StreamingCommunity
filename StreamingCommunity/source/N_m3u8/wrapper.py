@@ -9,7 +9,6 @@ from typing import Optional, List, Dict, Any
 
 
 # External
-import httpx
 from rich.console import Console
 from rich.progress import Progress, TextColumn
 
@@ -19,6 +18,7 @@ from StreamingCommunity.utils.config import config_manager
 from StreamingCommunity.utils.os import internet_manager
 from StreamingCommunity.setup import get_ffmpeg_path, get_n_m3u8dl_re_path, get_bento4_decrypt_path, get_shaka_packager_path
 from StreamingCommunity.source.utils.tracker import download_tracker
+from StreamingCommunity.utils.http_client import create_async_client
 
 
 # Logic
@@ -254,7 +254,7 @@ class MediaDownloader:
             return []
         
         downloaded = []
-        async with httpx.AsyncClient(headers=self.headers, timeout=request_timeout) as client:
+        async with create_async_client(headers=self.headers) as client:
             for sub in self.external_subtitles:
                 try:
                     if not sub.get('_selected', True):

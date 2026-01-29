@@ -11,6 +11,10 @@ from rich import box
 from StreamingCommunity.utils import internet_manager, get_key
 
 
+# Logic
+from ..utils.trans_codec import get_audio_codec_name, get_video_codec_name, get_codec_type
+
+
 def build_table(streams, selected: set, cursor: int, window_size: int = 12, highlight_cursor: bool = True):
     """Build and return the current table view"""
 
@@ -53,6 +57,20 @@ def build_table(streams, selected: set, cursor: int, window_size: int = 12, high
             style = "bold white on blue"
         else:
             style = "dim" if idx % 2 == 1 else None
+        
+        # Transcode codec names
+        readable_codecs = ""
+        if "," in getattr(s, 'codec', ''):
+            for raw_codec in getattr(s, 'codec', '').split(","):
+                if get_codec_type(raw_codec) == "Audio":
+                    readable_codecs += f", {get_audio_codec_name(raw_codec)}"
+                elif get_codec_type(raw_codec) == "Video":
+                    readable_codecs += get_video_codec_name(raw_codec)
+        else:
+            if get_codec_type(getattr(s, 'codec', '')) == "Audio":
+                readable_codecs = get_audio_codec_name(getattr(s, 'codec', ''))
+            elif get_codec_type(getattr(s, 'codec', '')) == "Video":
+                readable_codecs = get_video_codec_name(getattr(s, 'codec', ''))
 
         table.add_row(
             str(idx + 1),
@@ -61,7 +79,7 @@ def build_table(streams, selected: set, cursor: int, window_size: int = 12, high
             "X" if is_selected else "",
             getattr(s, 'resolution', '') if getattr(s, 'type', '') == "Video" else "",
             bitrate,
-            getattr(s, 'codec', '') or '',
+            readable_codecs,
             getattr(s, 'language', '') or '',
             getattr(s, 'name', '') or '',
             internet_manager.format_time(getattr(s, 'total_duration', 0), add_hours=True) if getattr(s, 'total_duration', 0) > 0 else "N/A",

@@ -101,7 +101,6 @@ class GetSerieInfo:
             'id': season_set.get('id', ''),
             'number': season_number,
             'name': set_name,
-            #'episodes_count': season_set.get('episode_size', {}).get('number', 0),
             'type': block_name
         })
 

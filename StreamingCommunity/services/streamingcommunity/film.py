@@ -8,9 +8,8 @@ from rich.console import Console
 
 
 # Internal utilities
-from StreamingCommunity.utils import os_manager, config_manager, start_message
+from StreamingCommunity.utils import os_manager, config_manager, tmdb_client, start_message
 from StreamingCommunity.services._base import site_constants, MediaItem
-from StreamingCommunity.core.media import tmdb_client
 from StreamingCommunity.core.downloader import HLS_Downloader
 
 
@@ -40,7 +39,7 @@ def download_film(select_title: MediaItem) -> str:
     # Prepare TMDB data 
     tmdb_data = None
     if use_other_api:
-        result = tmdb_client.get_type_and_id_by_slug_year(select_title.slug, select_title.year)
+        result = tmdb_client.get_type_and_id_by_slug_year(select_title.slug, select_title.year, "movie")
         
         if result and result.get('id') and result.get('type') == 'movie':
             tmdb_data = {'id': result.get('id')}
@@ -60,7 +59,7 @@ def download_film(select_title: MediaItem) -> str:
         return None
 
     # Define the filename and path for the downloaded film
-    mp4_name = f"{os_manager.get_sanitize_file(select_title.name, select_title.date)}.{extension_output}"
+    mp4_name = f"{os_manager.get_sanitize_file(select_title.name, select_title.year)}.{extension_output}"
     mp4_path = os.path.join(site_constants.MOVIE_FOLDER, mp4_name.replace(f".{extension_output}", ""))
 
     # Download the film using the m3u8 playlist, and output filename

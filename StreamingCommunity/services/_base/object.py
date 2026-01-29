@@ -1,6 +1,15 @@
 # 23.11.24
 
+from datetime import datetime
 from typing import Dict, Any, List, Optional
+
+
+# Internal utilities
+from StreamingCommunity.utils import config_manager, tmdb_client
+
+
+# Variable
+TMDB_KEY = config_manager.login.get('TMDB', 'api_key')
 
 
 class Episode:
@@ -136,7 +145,6 @@ class MediaItem(metaclass=MediaItemMeta):
     url: str
     size: str
     score: str
-    date: str
     desc: str
     slug: str
     year: str
@@ -153,6 +161,22 @@ class MediaManager:
         Args:
             data (dict): Media data to add.
         """
+        if ('year' in data):
+            if (TMDB_KEY != '' and TMDB_KEY is not None) and not (data['year'] != "9999" ):
+                if ('slug' in data and data['slug'] != ''):
+                    print(f"Fetching year for slug: {data['slug']}, type: {data['type']}")
+                    data['year'] = str(tmdb_client.get_year_by_slug_and_type(data['slug'], data['type']) or "9999")
+                    if data['year'] == "9999":
+                        print("Cant fetch year setting current year.")
+                        data['year'] = str(datetime.now().year)
+
+                elif ('name' in data and data['name'] != ''):
+                    print(f"Fetching year for name: {data['name']}, type: {data['type']}")
+                    data['year'] = str(tmdb_client.get_year_by_slug_and_type(data['name'].replace(' ', '-').lower(), data['type']) or "9999")
+                    if data['year'] == "9999":
+                        print("Cant fetch year setting current year.")
+                        data['year'] = str(datetime.now().year)
+
         self.media_list.append(MediaItem(**data))
 
     def get(self, index: int) -> MediaItem:

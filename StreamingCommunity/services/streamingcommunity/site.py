@@ -99,34 +99,32 @@ def title_search(query: str) -> int:
                 if filename:
                     image_url = f"{site_constants.FULL_URL.replace('stream', 'cdn.stream')}/images/{filename}"
 
-                # Extract date: prefer first_air_date at root level, otherwise search in translations
-                date = None
-                
-                if not date:
+                # Extract year: prefer first_air_date at root level, otherwise search in translations
+                year = None
+                if not year:
                     for trans in dict_title.get('translations') or []:
                         if trans.get('key') == 'first_air_date' and trans.get('value'):
-                            date = trans.get('value')
+                            year = trans.get('value')
                             break
                 
-                # If still no date, try release_date in translations
-                if not date:
+                # If still no year, try release_date in translations
+                if not year:
                     for trans in dict_title.get('translations') or []:
                         if trans.get('key') == 'release_date' and trans.get('value'):
-                            date = trans.get('value')
+                            year = trans.get('value')
                             break
 
-                # If still no date, use root level fields
-                if not date:
-                    date = dict_title.get('last_air_date') or dict_title.get('release_date')
+                # If still no year, use root level fields
+                if not year:
+                    year = dict_title.get('last_air_date') or dict_title.get('release_date')
 
                 media_search_manager.add_media({
                     'id': title_id,
                     'slug': dict_title.get('slug'),
                     'name': dict_title.get('name'),
                     'type': dict_title.get('type'),
-                    'date': date if date not in ("", None) else "1999-19-19",
                     'image': image_url,
-                    'year': date.split("-")[0] if date and "-" in date else "1999",
+                    'year': year.split("-")[0] if year and "-" in year else "9999",
                     'provider_language': lang
                 })
 

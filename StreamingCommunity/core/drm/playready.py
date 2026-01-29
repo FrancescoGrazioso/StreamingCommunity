@@ -4,12 +4,15 @@ import time
 
 
 # External libraries
-from curl_cffi import requests
 from rich.console import Console
 from pyplayready.cdm import Cdm
 from pyplayready.device import Device
 from pyplayready.remote.remotecdm import RemoteCdm
 from pyplayready.system.pssh import PSSH
+
+
+# Internal utilities
+from StreamingCommunity.utils.http_client import create_client_curl
 
 
 # Variable
@@ -108,7 +111,7 @@ def _get_playready_keys_local_cdm(pssh_list: list[dict], license_url: str, cdm_d
 
             # Make license request
             try:
-                response = requests.post(license_url, headers=req_headers, data=challenge, impersonate="chrome142", timeout=30)
+                response = create_client_curl(headers=req_headers).post(license_url, data=challenge)
                 time.sleep(0.25)
             except Exception as e:
                 console.print(f"[red]License request error: {e}")

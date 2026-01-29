@@ -43,32 +43,29 @@ class StreamingCommunityAPI(BaseStreamingAPI):
         Returns:
             List of MediaItem objects
         """
-        try:
-            search_fn = self._get_search_fn()
-            database = search_fn(query, get_onlyDatabase=True)
-            
-            results = []
-            if database and hasattr(database, 'media_list'):
-                for element in database.media_list:
-                    item_dict = element.__dict__.copy() if hasattr(element, '__dict__') else {}
-                    
-                    media_item = MediaItem(
-                        id=item_dict.get('id'),
-                        name=item_dict.get('name'),
-                        slug=item_dict.get('slug', ''),
-                        type=item_dict.get('type'),
-                        url=item_dict.get('url'),
-                        poster=item_dict.get('image'),
-                        year=item_dict.get('year'),
-                        provider_language=item_dict.get('provider_language'),
-                        raw_data=item_dict
-                    )
-                    results.append(media_item)
-            
-            return results
-        except Exception as e:
-            raise Exception(f"StreamingCommunity search error: {e}")
-    
+        search_fn = self._get_search_fn()
+        database = search_fn(query, get_onlyDatabase=True)
+        
+        results = []
+        if database and hasattr(database, 'media_list'):
+            for element in database.media_list:
+                item_dict = element.__dict__.copy() if hasattr(element, '__dict__') else {}
+                
+                media_item = MediaItem(
+                    id=item_dict.get('id'),
+                    name=item_dict.get('name'),
+                    slug=item_dict.get('slug', ''),
+                    type=item_dict.get('type'),
+                    url=item_dict.get('url'),
+                    poster=item_dict.get('image'),
+                    year=item_dict.get('year'),
+                    provider_language=item_dict.get('provider_language'),
+                    raw_data=item_dict
+                )
+                results.append(media_item)
+        
+        return results
+
     def get_series_metadata(self, media_item: MediaItem) -> Optional[List[Season]]:
         """
         Get seasons and episodes for a StreamingCommunity series.
@@ -83,43 +80,35 @@ class StreamingCommunityAPI(BaseStreamingAPI):
         if media_item.is_movie:
             return None
         
-        try:
-            scraper = GetSerieInfo(
-                url=f"{self.base_url}{media_item.provider_language}",
-                media_id=media_item.id,
-                series_name=media_item.slug,
-                years=media_item.year
-            )
+        scraper = GetSerieInfo(
+            url=f"{self.base_url}{media_item.provider_language}",
+            media_id=media_item.id,
+            series_name=media_item.slug,
+            year=media_item.year
+        )
+        
+        seasons_count = scraper.getNumberSeason()
+        if not seasons_count:
+            return None
+        
+        seasons = []
+        for season_num in range(1, seasons_count + 1):
+            episodes_raw = scraper.getEpisodeSeasons(season_num)
+            episodes = []
             
-            seasons_count = scraper.getNumberSeason()
-            if not seasons_count:
-                return None
+            for idx, ep in enumerate(episodes_raw or [], 1):
+                episode = Episode(
+                    number=idx,
+                    name=getattr(ep, 'name', f"Episodio {idx}"),
+                    id=getattr(ep, 'id', idx)
+                )
+                episodes.append(episode)
             
-            seasons = []
-            for season_num in range(1, seasons_count + 1):
-                try:
-                    episodes_raw = scraper.getEpisodeSeasons(season_num)
-                    episodes = []
-                    
-                    for idx, ep in enumerate(episodes_raw or [], 1):
-                        episode = Episode(
-                            number=idx,
-                            name=getattr(ep, 'name', f"Episodio {idx}"),
-                            id=getattr(ep, 'id', idx)
-                        )
-                        episodes.append(episode)
-                    
-                    season = Season(number=season_num, episodes=episodes)
-                    seasons.append(season)
+            season = Season(number=season_num, episodes=episodes)
+            seasons.append(season)
+        
+        return seasons if seasons else None
 
-                except Exception:
-                    continue
-            
-            return seasons if seasons else None
-            
-        except Exception as e:
-            raise Exception(f"Error getting series metadata: {e}")
-    
     def start_download(self, media_item: MediaItem, season: Optional[str] = None, episodes: Optional[str] = None) -> bool:
         """
         Start downloading from StreamingCommunity.
@@ -132,23 +121,19 @@ class StreamingCommunityAPI(BaseStreamingAPI):
         Returns:
             True if download started successfully
         """
-        try:
-            search_fn = self._get_search_fn()
-            
-            # Prepare direct_item from MediaItem
-            direct_item = media_item.raw_data or media_item.to_dict()
-            
-            # Prepare selections
-            selections = None
-            if season or episodes:
-                selections = {
-                    'season': season,
-                    'episode': episodes
-                }
-            
-            # Execute download
-            search_fn(direct_item=direct_item, selections=selections)
-            return True
-            
-        except Exception as e:
-            raise Exception(f"Download error: {e}")
+        search_fn = self._get_search_fn()
+        
+        # Prepare direct_item from MediaItem
+        direct_item = media_item.raw_data or media_item.to_dict()
+        
+        # Prepare selections
+        selections = None
+        if season or episodes:
+            selections = {
+                'season': season,
+                'episode': episodes
+            }
+        
+        # Execute download
+        search_fn(direct_item=direct_item, selections=selections)
+        return True

@@ -5,6 +5,7 @@ from .console import start_message
 from .console import TVShowManager
 from .os import os_manager, internet_manager
 from .keyboards import get_key
+from .tmdb_client import tmdb_client
 
 
 __all__ = [
@@ -15,4 +16,5 @@ __all__ = [
     "start_message",
     "internet_manager",
     "get_key",
+    "tmdb_client",
 ]

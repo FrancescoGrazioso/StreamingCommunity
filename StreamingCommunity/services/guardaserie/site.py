@@ -7,7 +7,7 @@ from rich.console import Console
 
 
 # Internal utilities
-from StreamingCommunity.utils.http_client import create_client, get_userAgent
+from StreamingCommunity.utils.http_client import create_client_curl, get_userAgent
 from StreamingCommunity.services._base import site_constants, MediaManager
 from StreamingCommunity.utils import TVShowManager
 
@@ -35,7 +35,7 @@ def title_search(query: str) -> int:
     console.print(f"[cyan]Search url: [yellow]{search_url}")
 
     try:
-        response = create_client(headers={'user-agent': get_userAgent()}).get(search_url)
+        response = create_client_curl(headers={'user-agent': get_userAgent()}).get(search_url)
         response.raise_for_status()
     except Exception as e:
         console.print(f"[red]Site: {site_constants.SITE_NAME}, request search error: {e}")

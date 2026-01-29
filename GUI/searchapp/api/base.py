@@ -16,7 +16,6 @@ class MediaItem:
     path_id: Optional[str] = None
     url: Optional[str] = None
     poster: Optional[str] = None
-    release_date: Optional[str] = None
     year: Optional[int] = None
     provider_language: Optional[str] = None
     raw_data: Optional[Dict[str, Any]] = None
@@ -33,7 +32,6 @@ class MediaItem:
             'type': self.type,
             'url': self.url,
             'poster': self.poster,
-            'release_date': self.release_date,
             'year': self.year,
             'raw_data': self.raw_data,
             'is_movie': self.is_movie,
@@ -162,7 +160,6 @@ class BaseStreamingAPI(ABC):
             type=data.get('type') or data.get('media_type') or 'unknown',
             url=data.get('url'),
             poster=data.get('poster') or data.get('poster_url') or data.get('image'),
-            release_date=data.get('release_date') or data.get('first_air_date'),
             year=data.get('year'),
             provider_language=data.get('provider_language'),
             raw_data=data

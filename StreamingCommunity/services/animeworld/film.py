@@ -40,7 +40,7 @@ def download_film(select_title: MediaItem):
     console.print(f"\n[yellow]Download: [red]{site_constants.SITE_NAME} ([cyan]{scrape_serie.get_name()}) \n")
 
     # Define filename and path for the downloaded video
-    serie_name_with_year = os_manager.get_sanitize_file(scrape_serie.get_name(), select_title.date)
+    serie_name_with_year = os_manager.get_sanitize_file(scrape_serie.get_name(), select_title.year)
     mp4_name = f"{serie_name_with_year}.mp4"
     mp4_path = os.path.join(site_constants.ANIME_FOLDER, serie_name_with_year.replace('.mp4', ''))
 

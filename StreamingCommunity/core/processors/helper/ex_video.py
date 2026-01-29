@@ -60,12 +60,8 @@ def is_png_format_or_codec(file_info):
     """
     if not file_info:
         return False
-    
-    # Handle None values in format_name gracefully
-    format_name = file_info.get('format_name')
-    codec_names = file_info.get('codec_names', [])
-    console.print(f"[yellow]FFMPEG [cyan]Format [green]{format_name} [cyan]codec[white]: [green]{codec_names}")
-    return format_name == 'png_pipe' or 'png' in codec_names
+
+    return file_info.get('format_name') == 'png_pipe' or 'png' in file_info.get('codec_names', [])
 
 
 def need_to_force_to_ts(file_path):

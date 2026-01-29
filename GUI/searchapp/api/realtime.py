@@ -42,29 +42,25 @@ class RealtimeAPI(BaseStreamingAPI):
         Returns:
             List of MediaItem objects
         """
-        try:
-            search_fn = self._get_search_fn()
-            database = search_fn(query, get_onlyDatabase=True)
-            
-            results = []
-            if database and hasattr(database, 'media_list'):
-                for element in database.media_list:
-                    item_dict = element.__dict__.copy() if hasattr(element, '__dict__') else {}
-                    
-                    media_item = MediaItem(
-                        name=item_dict.get('name'),
-                        type=item_dict.get('type'),
-                        url=item_dict.get('url'),
-                        poster=item_dict.get('image'),
-                        year=item_dict.get('date'),
-                        raw_data=item_dict
-                    )
-                    results.append(media_item)
-            
-            return results
+        search_fn = self._get_search_fn()
+        database = search_fn(query, get_onlyDatabase=True)
         
-        except Exception as e:
-            raise Exception(f"Realtime search error: {e}")
+        results = []
+        if database and hasattr(database, 'media_list'):
+            for element in database.media_list:
+                item_dict = element.__dict__.copy() if hasattr(element, '__dict__') else {}
+                
+                media_item = MediaItem(
+                    name=item_dict.get('name'),
+                    type=item_dict.get('type'),
+                    url=item_dict.get('url'),
+                    poster=item_dict.get('image'),
+                    year=item_dict.get('year'),
+                    raw_data=item_dict
+                )
+                results.append(media_item)
+        
+        return results
     
     def get_series_metadata(self, media_item: MediaItem) -> Optional[List[Season]]:
         """
@@ -79,41 +75,32 @@ class RealtimeAPI(BaseStreamingAPI):
         if media_item.is_movie:
             return None
         
-        try:
-            scrape_serie = GetSerieInfo(media_item.url)
-            scrape_serie.getNumberSeason()
-            seasons_count = len(scrape_serie.seasons_manager)
-            
-            if not seasons_count:
-                print(f"[Realtime] No seasons found for: {media_item.name}")
-                return None
+        scrape_serie = GetSerieInfo(media_item.url)
+        scrape_serie.getNumberSeason()
+        seasons_count = len(scrape_serie.seasons_manager)
         
-            seasons = []
-            for season_num in range(1, seasons_count + 1):
-                try:
-                    episodes_raw = scrape_serie.getEpisodeSeasons(season_num)
-                    episodes = []
-                    
-                    for idx, ep in enumerate(episodes_raw or [], 1):
-                        episode = Episode(
-                            number=idx,
-                            name=getattr(ep, 'name', f"Episodio {idx}"),
-                            id=getattr(ep, 'id', idx)
-                        )
-                        episodes.append(episode)
-                    
-                    season = Season(number=season_num, episodes=episodes)
-                    seasons.append(season)
-                    print(f"[Realtime] Season {season_num}: {len(episodes)} episodes")
-                
-                except Exception as e:
-                    print(f"[Realtime] Error getting season {season_num}: {e}")
-                    continue
+        if not seasons_count:
+            print(f"[Realtime] No seasons found for: {media_item.name}")
+            return None
+    
+        seasons = []
+        for season_num in range(1, seasons_count + 1):
+            episodes_raw = scrape_serie.getEpisodeSeasons(season_num)
+            episodes = []
             
-            return seasons if seasons else None
+            for idx, ep in enumerate(episodes_raw or [], 1):
+                episode = Episode(
+                    number=idx,
+                    name=getattr(ep, 'name', f"Episodio {idx}"),
+                    id=getattr(ep, 'id', idx)
+                )
+                episodes.append(episode)
             
-        except Exception as e:
-            raise Exception(f"Error getting series metadata: {e}")
+            season = Season(number=season_num, episodes=episodes)
+            seasons.append(season)
+            print(f"[Realtime] Season {season_num}: {len(episodes)} episodes")
+        
+        return seasons if seasons else None
     
     def start_download(self, media_item: MediaItem, season: Optional[str] = None, episodes: Optional[str] = None) -> bool:
         """
@@ -127,23 +114,19 @@ class RealtimeAPI(BaseStreamingAPI):
         Returns:
             True if download started successfully
         """
-        try:
-            search_fn = self._get_search_fn()
-            
-            # Prepare direct_item from MediaItem
-            direct_item = media_item.raw_data or media_item.to_dict()
-            
-            # Prepare selections
-            selections = None
-            if season or episodes:
-                selections = {
-                    'season': season,
-                    'episode': episodes
-                }
-            
-            # Execute download
-            search_fn(direct_item=direct_item, selections=selections)
-            return True
-            
-        except Exception as e:
-            raise Exception(f"Download error: {e}")
+        search_fn = self._get_search_fn()
+        
+        # Prepare direct_item from MediaItem
+        direct_item = media_item.raw_data or media_item.to_dict()
+        
+        # Prepare selections
+        selections = None
+        if season or episodes:
+            selections = {
+                'season': season,
+                'episode': episodes
+            }
+        
+        # Execute download
+        search_fn(direct_item=direct_item, selections=selections)
+        return True

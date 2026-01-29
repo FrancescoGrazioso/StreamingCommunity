@@ -89,7 +89,7 @@ def title_search(query: str) -> int:
                 'type': 'tv',
                 'url': url,
                 'image': image,
-                'year': image.split("/")[5]
+                'year': image.split("/")[-4]
             })
     
         except Exception as e:
