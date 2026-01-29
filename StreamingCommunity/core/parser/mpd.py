@@ -359,6 +359,7 @@ class MPDParser:
             groups.setdefault(s['content_type'], []).append(s)
         
         for c_type, items in groups.items():
+            
             # Check if uniform (all same KID and no specific filter)
             has_filter = any([selected_ids, selected_kids, selected_langs])
             is_uni = len({i['default_kid'] for i in items}) == 1 and not has_filter

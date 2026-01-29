@@ -1,6 +1,5 @@
 # 16.04.24
 
-import sys
 import json
 import subprocess
 import logging
@@ -20,28 +19,22 @@ console = Console()
 
 def get_video_duration(file_path: str, file_type: str = "file") -> float:
     """Get the duration of a media file (video or audio)."""
-    try:
-        ffprobe_cmd = [get_ffprobe_path(), '-v', 'error', '-show_format', '-print_format', 'json', file_path]
-        with subprocess.Popen(ffprobe_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as proc:
-            stdout, stderr = proc.communicate()
+    ffprobe_cmd = [get_ffprobe_path(), '-v', 'error', '-show_format', '-print_format', 'json', file_path]
+    with subprocess.Popen(ffprobe_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as proc:
+        stdout, stderr = proc.communicate()
 
-            if proc.returncode != 0:
-                logging.error(f"Error: {stderr}")
-                return None
+        if proc.returncode != 0:
+            logging.error(f"Error get_video_duration: {stderr}")
+            return None
 
-            # Parse JSON output
-            probe_result = json.loads(stdout)
+        # Parse JSON output
+        probe_result = json.loads(stdout)
 
-            # Extract duration from the media information
-            try:
-                return float(probe_result['format']['duration'])
-
-            except Exception:
-                return 1
-
-    except Exception as e:
-        logging.error(f"Get {file_type} duration error: {e}, ffprobe path: {get_ffprobe_path()}, file path: {file_path}")
-        sys.exit(0)
+        # Extract duration from the media information
+        try:
+            return float(probe_result['format']['duration'])
+        except Exception:
+            return 1
 
 
 def check_duration_v_a(video_path, audio_path, tolerance=1.0):

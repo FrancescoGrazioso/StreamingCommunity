@@ -1,0 +1,196 @@
+# 29.01.26
+
+import time
+import base64
+
+
+# External libraries
+from curl_cffi import requests
+from rich.console import Console
+from pywidevine.cdm import Cdm
+from pywidevine.device import Device
+from pywidevine.device import DeviceTypes
+from pywidevine.remotecdm import RemoteCdm
+from pywidevine.pssh import PSSH
+
+
+# Variable
+console = Console()
+
+
+def get_widevine_keys(pssh_list: list[dict], license_url: str, cdm_device_path: str = None, cdm_remote_api: list[str] = None, headers: dict = None, key: str = None, kid_to_label: dict = None):
+    """
+    Extract Widevine CONTENT keys (KID/KEY) from a license.
+
+    Args:
+        - pssh_list (list[dict]): List of dicts {'pssh': ..., 'kid': ..., 'type': ...}
+        - license_url (str): Widevine license URL.
+        - cdm_device_path (str): Path to local CDM file (device.wvd). Optional if using remote.
+        - cdm_remote_api (list[str]): Remote CDM API config. Optional if using local device.
+        - headers (dict): Optional HTTP headers for the license request (from fetch).
+        - key (str): Optional raw license data to bypass HTTP request.
+        - kid_to_label (dict): Mapping from KID (hex) to track label.
+
+    Returns:
+        list: List of strings "KID:KEY" (only CONTENT keys) or None if error.
+    """
+    # Handle pre-existing key
+    if key:
+        k_split = key.split(':')
+        if len(k_split) == 2:
+            return [f"{k_split[0].replace('-', '').strip()}:{k_split[1].replace('-', '').strip()}"]
+        return None
+
+    # Check if we have either local or remote CDM
+    if cdm_device_path is None and cdm_remote_api is None:
+        console.print("[red]Error: Must provide either cdm_device_path or cdm_remote_api.")
+        return None
+    
+    return _get_widevine_keys(pssh_list, license_url, cdm_device_path, cdm_remote_api, headers, kid_to_label)
+
+
+def _get_widevine_keys(pssh_list: list[dict], license_url: str, cdm_device_path: str, cdm_remote_api: list[str], headers: dict = None, kid_to_label: dict = None):
+    """Extract Widevine keys using local or remote CDM device."""
+    device = None
+    cdm = None
+    
+    # Initialize device
+    if cdm_device_path is not None:
+        console.print(f"[cyan]Using local CDM device at: [green]{cdm_device_path}")
+        try:
+            device = Device.load(cdm_device_path)
+            cdm = Cdm.from_device(device)
+
+        except Exception as e:
+            console.print(f"[red]Error loading local CDM device: {e}")
+            return None
+    else:
+        console.print("[cyan]Using remote CDM.")
+        try:
+            if cdm_remote_api['device_type'] == 'ANDROID':
+                cdm_remote_api['device_type'] = DeviceTypes.ANDROID
+            elif cdm_remote_api['device_type'] == 'CHROME':
+                cdm_remote_api['device_type'] = DeviceTypes.CHROME
+            else:
+                console.print(f"[red]Unsupported remote CDM device type: {cdm_remote_api['device_type']}")
+                return None
+            cdm = RemoteCdm(**cdm_remote_api)
+        except Exception as e:
+            console.print(f"[red]Error initializing remote CDM: {e}")
+            return None
+
+    # Open CDM session
+    session_id = cdm.open()
+    all_content_keys = []
+    try:
+        for i, item in enumerate(pssh_list):
+            pssh = item['pssh']
+            kid_info = str(item.get('kid', 'N/A')).replace('-', '').lower().strip()
+            type_info = item.get('type', 'unknown')
+            console.print(f" [yellow]{i}) [cyan]PSSH [yellow]{pssh[:50]}... [cyan]for Kid: [red]{kid_info} [cyan]Type: [red]{type_info}")
+            
+            # Create license challenge
+            try:
+                challenge = cdm.get_license_challenge(session_id, PSSH(pssh))
+            except Exception as e:
+                console.print(f"[red]Error creating challenge for PSSH {pssh[:30]}...: {e}")
+                continue
+            
+            # Prepare headers (use original headers from fetch)
+            req_headers = headers.copy() if headers else {}
+            if 'Content-Type' not in req_headers:
+                req_headers['Content-Type'] = 'application/octet-stream'
+
+            if license_url is None:
+                console.print("[red]License URL is None.")
+                continue
+
+            # Make license request
+            try:
+                response = requests.post(license_url, headers=req_headers, data=challenge, impersonate="chrome142", timeout=30)
+                time.sleep(0.25)
+            except Exception as e:
+                console.print(f"[red]License request error: {e}")
+                continue
+
+            if response.status_code != 200:
+                console.print(f"[red]License error: {response.status_code}, {response.text[:200]}")
+                continue
+
+            # Parse license response
+            license_bytes = response.content
+            content_type = response.headers.get("Content-Type", "")
+
+            # Handle JSON response
+            if "application/json" in content_type:
+                try:
+                    data = response.json()
+                    if "license" in data:
+                        license_bytes = base64.b64decode(data["license"])
+                    else:
+                        console.print(f"[red]'license' field not found in JSON response: {data}.")
+                        continue
+                except Exception as e:
+                    console.print(f"[red]Error parsing JSON license: {e}")
+                    continue
+
+            if not license_bytes:
+                console.print("[red]License data is empty.")
+                continue
+
+            # Parse license
+            try:
+                cdm.parse_license(session_id, license_bytes)
+            except Exception as e:
+                console.print(f"[red]Error parsing license: {e}")
+                continue
+
+            # Extract CONTENT keys
+            try:
+                for key_obj in cdm.get_keys(session_id):
+                    if key_obj.type != 'CONTENT':
+                        continue
+
+                    # Skip all-zero KIDs
+                    kid = key_obj.kid.hex
+                    if all(c == '0' for c in kid):
+                        continue
+
+                    if kid != kid_info:
+                        console.print(f"[yellow]Warning: Extracted KID [red]{kid} does not match expected KID [red]{kid_info}")
+                        kid = kid_info  # Use expected KID for consistency
+
+                    formatted_key = f"{kid}:{key_obj.key.hex()}"
+                    if formatted_key not in all_content_keys:
+                        all_content_keys.append(formatted_key)
+
+            except Exception as e:
+                console.print(f"[red]Error extracting keys: {e}")
+                continue
+
+            # Break if 'all' type requested or single PSSH with keys extracted
+            if (type_info.lower() == 'all' and len(all_content_keys) >= 1) or (len(pssh_list) == 1 and len(all_content_keys) >= 1):
+                break
+
+        # Display extracted keys
+        if all_content_keys:
+            console.print(f"[green]Extracted {len(all_content_keys)} key(s):")
+            for i, k in enumerate(all_content_keys):
+                kid, key_val = k.split(':')
+                label = kid_to_label.get(kid.lower()) if kid_to_label else None
+                label_str = f" [cyan]| [red]{label}" if label else ""
+                console.print(f"    [yellow]{i}) [cyan]KID: [red]{kid} [cyan]| KEY: [green]{key_val}{label_str}")
+        else:
+            console.print("[yellow]No keys extracted")
+        
+        return all_content_keys if all_content_keys else None
+    
+    except Exception as e:
+        console.print(f"[red]Unexpected error during key extraction: {e}")
+        return None
+    
+    finally:
+        try:
+            cdm.close(session_id)
+        except Exception:
+            pass

@@ -26,6 +26,7 @@ from StreamingCommunity.source.N_m3u8 import MediaDownloader
 console = Console()
 CLEANUP_TMP = config_manager.config.get_bool('M3U8_DOWNLOAD', 'cleanup_tmp_folder')
 EXTENSION_OUTPUT = config_manager.config.get("M3U8_CONVERSION", "extension")
+SKIP_DOWNLOAD = config_manager.config.get_bool('M3U8_DOWNLOAD', 'skip_download')
 
 
 class HLS_Downloader:
@@ -84,6 +85,10 @@ class HLS_Downloader:
         
         # Create output directory
         os_manager.create_path(self.output_dir)
+
+        if SKIP_DOWNLOAD:
+            console.print("[yellow]Skipping download as per configuration.")
+            return self.output_path, False
         
         # Create media player ignore files to prevent media scanners
         try:
@@ -179,11 +184,6 @@ class HLS_Downloader:
             self.last_merge_result = result_json
             
             if os.path.exists(merged_file):
-                if current_file != video_path and os.path.exists(current_file):
-                    try:
-                        os.remove(current_file)
-                    except Exception:
-                        pass
                 current_file = merged_file
             else:
                 console.print("[yellow]Subtitle merge failed, continuing without subtitles")

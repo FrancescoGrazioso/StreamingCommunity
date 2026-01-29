@@ -15,11 +15,12 @@
     },
     "M3U8_DOWNLOAD": {
         "auto_select": true,
+        "skip_download": false,
         "thread_count": 8,
         "retry_count": 30,
         "concurrent_download": true,
         "max_speed": "30MB",
-        "real_time_decryption": true,
+        "real_time_decryption": false,
         "check_segments_count": true,
         "select_video": "res=1920:for=best",
         "select_audio": "lang='ita|Ita|it'",

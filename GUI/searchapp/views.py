@@ -195,7 +195,7 @@ def series_metadata(request: HttpRequest) -> JsonResponse:
         })
         
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"Error get metadata": str(e)}, status=500)
 
 
 @require_http_methods(["POST"])

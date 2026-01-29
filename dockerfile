@@ -3,6 +3,7 @@ FROM python:3.11-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nano \
     libicu-dev \
+    ffmpeg \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -20,7 +21,6 @@ RUN pip install --no-cache-dir -r GUI/requirements.txt
 COPY . . 
 
 RUN mkdir -p /app/Video /app/logs /app/data \
-             /home/appuser/.local/bin/binary \
              /home/appuser/.config && \
     chown -R appuser:appuser /app /home/appuser && \
     chmod -R 755 /app /home/appuser

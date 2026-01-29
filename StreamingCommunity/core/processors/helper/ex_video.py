@@ -1,7 +1,6 @@
 # 17.01.25
 
 import json
-import os
 import subprocess
 import logging
 
@@ -29,38 +28,24 @@ def get_ffprobe_info(file_path):
         dict: A dictionary containing the format name and a list of codec names.
               Returns None if file does not exist or ffprobe crashes.
     """
-    if not os.path.exists(file_path):
-        logging.error(f"File not found: {file_path}")
-        return None
 
-    try:
-        cmd = [get_ffprobe_path(), '-v', 'error', '-show_format', '-show_streams', '-print_format', 'json', file_path]
-        
-        # Use subprocess.run instead of Popen for better error handling
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=False
-        )
-
-        if result.returncode != 0:
-            logging.error(f"FFprobe failed with return code {result.returncode}")
-            logging.error(f"FFprobe stderr: {result.stderr}")
-            logging.error(f"FFprobe stdout: {result.stdout}")
-            logging.error(f"Command: {' '.join(cmd)}")
-            return None
-
-        # Parse JSON output
-        info = json.loads(result.stdout)
-        return {
-            'format_name': info.get('format', {}).get('format_name'),
-            'codec_names': [stream.get('codec_name') for stream in info.get('streams', [])]
-        }
+    cmd = [get_ffprobe_path(), '-v', 'error', '-show_format', '-show_streams', '-print_format', 'json', file_path]
     
-    except Exception as e:
-        logging.error(f"FFprobe execution failed: {e}")
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+
+    if result.returncode != 0:
+        logging.error(f"FFprobe failed with return code {result.returncode}")
+        logging.error(f"FFprobe stderr: {result.stderr}")
+        logging.error(f"FFprobe stdout: {result.stdout}")
+        logging.error(f"Command: {' '.join(cmd)}")
         return None
+
+    # Parse JSON output
+    info = json.loads(result.stdout)
+    return {
+        'format_name': info.get('format', {}).get('format_name'),
+        'codec_names': [stream.get('codec_name') for stream in info.get('streams', [])]
+    }
 
 
 def is_png_format_or_codec(file_info):

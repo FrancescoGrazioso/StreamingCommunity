@@ -23,17 +23,19 @@ from StreamingCommunity.utils import config_manager, os_manager, internet_manage
 # DRM Utilities
 from StreamingCommunity.source.N_m3u8 import MediaDownloader
 from StreamingCommunity.setup import get_wvd_path, get_prd_path
-from ..extractors import MPDParser, DRMSystem, get_widevine_keys, get_playready_keys
+from ..parser import MPDParser, DRMSystem
+from ..drm import DRMManager
 
 
 # Config
 console = Console()
 CLEANUP_TMP = config_manager.config.get_bool('M3U8_DOWNLOAD', 'cleanup_tmp_folder')
 EXTENSION_OUTPUT = config_manager.config.get("M3U8_CONVERSION", "extension")
+SKIP_DOWNLOAD = config_manager.config.get_bool('M3U8_DOWNLOAD', 'skip_download')
 
 
 class DASH_Downloader:
-    def __init__(self, license_url: str, license_headers: Dict[str, str] = None, mpd_url: str = None, mpd_headers: Dict[str, str] = None, mpd_sub_list: list = None, output_path: str = None, drm_preference: str = 'widevine', decrypt_preference: str = "shaka", key: str = None, cookies: Dict[str, str] = None):
+    def __init__(self, license_url: str, license_headers: Dict[str, str] = None, mpd_url: str = None, mpd_headers: Dict[str, str] = None, mpd_sub_list: list = None, output_path: str = None, drm_preference: str = 'widevine', decrypt_preference: str = "bento4", key: str = None, cookies: Dict[str, str] = None):
         """
         Initialize DASH Downloader.
         
@@ -53,6 +55,7 @@ class DASH_Downloader:
         self.key = key
         self.cookies = cookies or {}
         self.decrypt_preference = decrypt_preference.lower()
+        self.drm_manager = DRMManager(get_wvd_path(), get_prd_path(), config_manager.remote_cdm.get('remote', 'widevine_l3'), config_manager.remote_cdm.get('remote', 'playready_l3'))
         
         # Tracking IDs - check context if not provided
         self.download_id = context_tracker.download_id
@@ -148,23 +151,9 @@ class DASH_Downloader:
             time.sleep(0.25)
             
             if drm_type == DRMSystem.WIDEVINE:
-                keys = get_widevine_keys(
-                    pssh_list=self.drm_info.get('widevine_pssh', []),
-                    license_url=self.license_url,
-                    cdm_device_path=get_wvd_path(),
-                    headers=self.license_headers,
-                    key=self.key,
-                    kid_to_label=self.kid_to_label
-                )
+                keys = self.drm_manager.get_wv_keys(self.drm_info.get('widevine_pssh', []), self.license_url, self.license_headers, self.key, self.kid_to_label)
             elif drm_type == DRMSystem.PLAYREADY:
-                keys = get_playready_keys(
-                    pssh_list=self.drm_info.get('playready_pssh', []),
-                    license_url=self.license_url,
-                    cdm_device_path=get_prd_path(),
-                    headers=self.license_headers,
-                    key=self.key,
-                    kid_to_label=self.kid_to_label
-                )
+                keys = self.drm_manager.get_pr_keys(self.drm_info.get('playready_pssh', []), self.license_url, self.license_headers, self.key, self.kid_to_label)
             else:
                 console.print(f"[red]Unsupported DRM type: {drm_type}")
                 self.error = f"Unsupported DRM type: {drm_type}"
@@ -340,6 +329,10 @@ class DASH_Downloader:
             if not self._fetch_decryption_keys():
                 logging.error(f"Failed to fetch decryption keys: {self.error}")
                 return None, True
+            
+        if SKIP_DOWNLOAD:
+            console.print("[yellow]Skipping download as per configuration.")
+            return self.output_path, False
         
         # Set keys and start download
         self.media_downloader.set_key(self.decryption_keys if self.decryption_keys else None)
@@ -447,14 +440,7 @@ class DASH_Downloader:
         self.last_merge_result = result_json
         
         if os.path.exists(merged_file):
-            # Clean up intermediate file if it exists and is different from original
-            if current_file != self.output_path and os.path.exists(current_file):
-                try:
-                    os.remove(current_file)
-                except Exception:
-                    pass
             return merged_file
-        
         else:
             console.print("[yellow]Subtitle merge failed, continuing without subtitles")
             return current_file

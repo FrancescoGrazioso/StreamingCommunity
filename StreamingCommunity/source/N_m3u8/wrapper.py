@@ -138,14 +138,6 @@ class MediaDownloader:
                 f = [f"lang={s.language}"] if getattr(s, 'language', None) else []
                 f += [f"codecs={s.codec}"] if getattr(s, 'codec', None) else []
                 
-                if getattr(s, 'bandwidth', None):
-                    bw = s.bandwidth.replace(' Kbps', '').replace(' Mbps', '').strip()
-                    try:
-                        bw_val = int(float(bw) * 1000) if 'Mbps' in s.bandwidth else int(float(bw))
-                        f += [f"bwMin={bw_val}", f"bwMax={bw_val}"]
-                    except (ValueError, AttributeError):
-                        pass
-                
                 if f:
                     filters.append(':'.join(f))
             return ':'.join(filters) + ':for=all' if filters else "for=all"

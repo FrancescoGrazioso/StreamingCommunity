@@ -134,8 +134,8 @@ def get_playback_info(video_id):
             'drmTypes': {
                 'widevine': True,
                 'playready': True,
-                'fairplay': False,
-                'clearkey': False,
+                'fairplay': True,
+                'clearkey': True,
             },
             'drmSupported': True
         },
