@@ -24,6 +24,7 @@
 - [Global Search](#global-search)
 - [Advanced Features](#advanced-features)
 - [Docker](#docker)
+- [TO DO](#todo)
 - [Related Projects](#related-projects)
 
 ---
@@ -358,24 +359,21 @@ docker run -d --name streaming-community --dns 1.1.1.1 -p 8000:8000 streaming-co
 docker run -d --dns 9.9.9.9 -p 8000:8000 -v /your/path:/app/Video streaming-community-api
 ```
 
-### Using Make
-```bash
-make build-container
-make LOCAL_DIR=/your/path run-container
-```
-
 ---
 
 ## TODO
 
-- [ ] Improve GUI - Enhance the graphical user interface with image for all episode
+- [ ] Improve the GUI; Enhance the graphical user interface and display images for all episodes.
+- [ ] Add images to search results: Show a thumbnail/image for each title in the search results.
+- [ ] Add images for each episode: Display a dedicated image or thumbnail for every episode.
+- [ ] Improve season selection: Populate the season selector using the actual extracted seasons (real data), instead of assuming a range from 1 to N.
 
 ---
 
 ## Related Projects
 
-- **[Unit3Dup](https://github.com/31December99/Unit3Dup)** - Torrent automation for Unit3D trackers
 - **[MammaMia](https://github.com/UrloMythus/MammaMia)** - Stremio addon for Italian streaming
+- **[Unit3Dup](https://github.com/31December99/Unit3Dup)** - Torrent automation for Unit3D tracker
 
 ---
 
@@ -406,9 +404,6 @@ make LOCAL_DIR=/your/path run-container
 ---
 
 <div align="center">
-
 **Made with ❤️ for streaming lovers**
-
 *If you find this project useful, consider starring it! ⭐*
-
 </div>

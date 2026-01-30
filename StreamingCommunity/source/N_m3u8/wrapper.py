@@ -130,6 +130,11 @@ class MediaDownloader:
         def build_video(s):
             f = [f"res={s.resolution}"] if getattr(s, 'resolution', None) else []
             f += [f"codecs={s.codec}"] if getattr(s, 'codec', None) else []
+            if getattr(s, 'raw_bandwidth', None):
+                bw_kbps = s.raw_bandwidth // 1000
+                f += [f"bwMin={bw_kbps - 10}"]
+                f += [f"bwMax={bw_kbps + 10}"]
+
             return ':'.join(f + ["for=best"])
 
         def build_audio(tracks):
@@ -137,7 +142,11 @@ class MediaDownloader:
             for s in tracks:
                 f = [f"lang={s.language}"] if getattr(s, 'language', None) else []
                 f += [f"codecs={s.codec}"] if getattr(s, 'codec', None) else []
-                
+                if getattr(s, 'raw_bandwidth', None):
+                    bw_kbps = s.raw_bandwidth // 1000
+                    f += [f"bwMin={bw_kbps - 10}"]
+                    f += [f"bwMax={bw_kbps + 10}"]
+
                 if f:
                     filters.append(':'.join(f))
             return ':'.join(filters) + ':for=all' if filters else "for=all"
@@ -166,12 +175,20 @@ class MediaDownloader:
         norm_a = self._normalize_filter(filters['audio'] if filters and filters.get('audio') else audio_filter)
         norm_s = self._normalize_filter(filters['subtitle'] if filters and filters.get('subtitle') else subtitle_filter)
         
-        cmd = [get_n_m3u8dl_re_path(), "--write-meta-json", "--no-log", "--save-dir", str(analysis_path), "--tmp-dir", str(analysis_path),
-               "--save-name", "temp_analysis", "--select-video", norm_v, "--select-audio", norm_a, "--select-subtitle", norm_s, "--skip-download"]
+        cmd = [
+            get_n_m3u8dl_re_path(), 
+            "--write-meta-json", 
+            "--no-log", 
+            "--save-dir", str(analysis_path), 
+            "--tmp-dir", str(analysis_path),
+            "--save-name", "temp_analysis", 
+            "--select-video", norm_v, 
+            "--select-audio", norm_a, 
+            "--select-subtitle", norm_s, 
+            "--skip-download"
+        ]
         cmd.extend(self._get_common_args())
         cmd.append(self.url)
-
-        console.print("[cyan]Analyzing playlist...")
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors='replace', bufsize=1, universal_newlines=True)
         
         # Save parsing log
@@ -284,15 +301,27 @@ class MediaDownloader:
         norm_s = self._normalize_filter(filters['subtitle'] if filters and 'subtitle' in filters else subtitle_filter)
 
         # Build command
-        cmd = [get_n_m3u8dl_re_path(), "--save-name", self.filename, "--save-dir", str(self.output_dir), "--tmp-dir", str(self.output_dir),
-               "--ffmpeg-binary-path", get_ffmpeg_path(), "--decryption-binary-path", self.determine_decryption_tool(),
-               "--no-log", "--write-meta-json", "false", "--binary-merge", "--del-after-done", "--select-video", norm_v]
+        cmd = [
+            get_n_m3u8dl_re_path(), 
+            "--save-name", self.filename, 
+            "--save-dir", str(self.output_dir), 
+            "--tmp-dir", str(self.output_dir),
+            "--ffmpeg-binary-path", get_ffmpeg_path(), 
+            "--decryption-binary-path", self.determine_decryption_tool(),
+            "--no-log", 
+            "--write-meta-json", "false", 
+            "--binary-merge",
+            "--del-after-done",
+            "--select-video", norm_v,
+            "--auto-subtitle-fix", "false",
+            "--check-segments-count", "true" if check_segments_count else "false",
+            "--mp4-real-time-decryption", "true" if real_time_decryption else "false"
+        ]
         
         if norm_a:
             cmd.extend(["--select-audio", norm_a])
         if norm_s:
             cmd.extend(["--select-subtitle", norm_s])
-        cmd.extend(["--auto-subtitle-fix", "false"])
         cmd.extend(self._get_common_args())
 
         # Add optional parameters
@@ -306,17 +335,11 @@ class MediaDownloader:
             cmd.extend(["--download-retry-count", str(retry_count)])
         if max_speed:
             cmd.extend(["--max-speed", max_speed])
-        if check_segments_count:
-            cmd.extend(["--check-segments-count", "true"])
-        if real_time_decryption:
-            cmd.extend(["--mp4-real-time-decryption", "true"])
-        
         if self.key:
             for single_key in ([self.key] if isinstance(self.key, str) else self.key):
                 cmd.extend(["--key", single_key])
         
         cmd.append(self.url)
-        console.print("\n[cyan]Starting download...")
         
         # Download external subtitles
         loop = asyncio.new_event_loop()

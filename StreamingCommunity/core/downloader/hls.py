@@ -99,7 +99,7 @@ class HLS_Downloader:
         status = self.media_downloader.start_download()
 
         # Check if any media was downloaded
-        if status.get('video') is None and status.get('audios') == [] and status.get('subtitles') == [] and status.get('external_subtitles') == []:
+        if self._no_media_downloaded(status):
             logging.error("No media downloaded")
             return None, True
 
@@ -126,6 +126,10 @@ class HLS_Downloader:
             shutil.rmtree(self.output_dir, ignore_errors=True)
         return self.output_path, False
 
+    def _no_media_downloaded(self, status):
+        """Check if no media was downloaded."""
+        return (status.get('video') is None and status.get('audios') == [] and status.get('subtitles') == [] and status.get('external_subtitles') == [])
+    
     def _merge_files(self, status) -> Optional[str]:
         """Merge downloaded files using FFmpeg"""
         if status['video'] is None:

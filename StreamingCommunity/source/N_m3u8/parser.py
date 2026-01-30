@@ -63,13 +63,12 @@ def parse_meta_json(json_path: str, selected_json_path: str) -> List[StreamInfo]
             for s in json.load(f):
                 
                 # Check for encryption in segments
-                enc = any(
-                    seg.get("EncryptInfo", {}).get("Method") not in ["NONE", None] 
-                    for part in s.get("Playlist", {}).get("MediaParts", [])
-                    for seg in part.get("MediaSegments", [])
-                )
+                enc_method = s.get('Playlist', {}).get('MediaParts', [{}])[0].get('MediaSegments', [{}])[0].get('EncryptInfo', {}).get('Method', 'NONE')
+                enc = enc_method != 'NONE' and enc_method is not None and enc_method != ''
+
                 selected_map[create_key(s)] = {
-                    'encrypted': enc, 
+                    'encrypted': enc,
+                    'encryption_method': enc_method,
                     'extension': s.get("Extension", ""),
                     'duration': s.get("Playlist", {}).get("TotalDuration", 0),
                     'segments': s.get("SegmentsCount", 0)
@@ -89,7 +88,6 @@ def parse_meta_json(json_path: str, selected_json_path: str) -> List[StreamInfo]
         sel = key in selected_map
         det = selected_map.get(key, {})
         
-        # Determine stream type
         st_type = "Video" if ("Resolution" in s and s.get("Resolution")) else s.get("MediaType", "Video").title()
         if st_type == "Subtitles": 
             st_type = "Subtitle"
@@ -100,12 +98,13 @@ def parse_meta_json(json_path: str, selected_json_path: str) -> List[StreamInfo]
             language=s.get("Language", ""),
             name=s.get("Name", ""),
             bandwidth="N/A" if st_type == "Subtitle" else bw_str,
+            raw_bandwidth=bw,
             codec=s.get("Codecs", ""),
             selected=sel,
-            encrypted=det.get('encrypted', False),
             extension=det.get('extension', s.get("Extension", "")),
             total_duration=det.get('duration', s.get("Playlist", {}).get("TotalDuration", 0)),
-            segment_count=det.get('segments', s.get("SegmentsCount", 0))
+            segment_count=det.get('segments', s.get("SegmentsCount", 0)),
+            segments_protection = s.get('Playlist', {}).get('MediaParts', [{}])[0].get('MediaSegments', [{}])[0].get('EncryptInfo', {}).get('Method', det.get('encryption_method', 'NONE')),
         ))
         
     return streams

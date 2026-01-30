@@ -54,10 +54,17 @@ def _get_playready_keys_local_cdm(pssh_list: list[dict], license_url: str, cdm_d
     """Extract PlayReady keys using local or remote CDM device."""
     device = None
     cdm = None
+
+    # Create a set of all expected KIDs (normalized)
+    expected_kids = set()
+    for item in pssh_list:
+        kid = str(item.get('kid', '')).replace('-', '').lower().strip()
+        if kid and kid != 'n/a':
+            expected_kids.add(kid)
     
     # Initialize device
     if cdm_device_path is not None:
-        console.print(f"\n[green]Using local CDM device: {cdm_device_path}")
+        console.print("[green]Using local CDM.")
         try:
             device = Device.load(cdm_device_path)
             cdm = Cdm.from_device(device)
@@ -75,12 +82,14 @@ def _get_playready_keys_local_cdm(pssh_list: list[dict], license_url: str, cdm_d
     # Open CDM session
     session_id = cdm.open()
     all_content_keys = []
+    extracted_kids = set()
+    
     try:
         for i, item in enumerate(pssh_list):
             pssh = item['pssh']
             kid_info = str(item.get('kid', 'N/A')).replace('-', '').lower().strip()
             type_info = item.get('type', 'unknown')
-            console.print(f" [yellow]{i}) [cyan]PSSH [yellow]{pssh[:50]}... [cyan]for Kid: [red]{kid_info} [cyan]Type: [red]{type_info}")
+            console.print(f"[red]{type_info} [cyan](PSSH: [yellow]{pssh[:30]}...[cyan] KID: [red]{kid_info})")
             
             # Parse PSSH
             try:
@@ -127,39 +136,46 @@ def _get_playready_keys_local_cdm(pssh_list: list[dict], license_url: str, cdm_d
             # Extract CONTENT keys
             try:
                 for key_obj in cdm.get_keys(session_id):
-                    kid = key_obj.key_id.hex.replace('-', '').strip()
+                    kid = key_obj.key_id.hex.replace('-', '').lower().strip()
                     
                     # Skip all-zero KIDs
                     if all(c == '0' for c in kid):
                         continue
 
-                    if kid != kid_info:
-                        console.print(f"[yellow]Warning: Extracted KID [red]{kid} does not match expected KID [red]{kid_info}")
-                        kid = kid_info  # Use expected KID for consistency
+                    # Check if this KID is in our expected list
+                    if kid not in expected_kids:
+                        console.print(f"[yellow]Warning: Extracted KID [red]{kid} [yellow]is not in the expected KID list")
+                    
+                    # Skip if we already extracted this KID
+                    if kid in extracted_kids:
+                        continue
                     
                     key_val = key_obj.key.hex().replace('-', '').strip()
                     formatted_key = f"{kid}:{key_val}"
 
                     if formatted_key not in all_content_keys:
                         all_content_keys.append(formatted_key)
+                        extracted_kids.add(kid)
                         
             except Exception as e:
                 console.print(f"[red]Error extracting keys: {e}")
                 continue
 
-            # Break if 'all' type requested or single PSSH with keys extracted
-            if (type_info.lower() == 'all' and len(all_content_keys) >= 1) or \
-               (len(pssh_list) == 1 and len(all_content_keys) >= 1):
+            # Break if 'all' type requested and we have all expected keys
+            if type_info.lower() == 'all' and len(extracted_kids) >= len(expected_kids):
+                break
+            
+            # For single PSSH, break after extracting at least one key
+            if len(pssh_list) == 1 and len(all_content_keys) >= 1:
                 break
 
         # Display extracted keys
         if all_content_keys:
-            console.print(f"[green] Extracted {len(all_content_keys)} key(s):")
             for i, k in enumerate(all_content_keys):
                 kid, key_val = k.split(':')
                 label = kid_to_label.get(kid.lower()) if kid_to_label else None
                 label_str = f" [cyan]| [red]{label}" if label else ""
-                console.print(f"    [yellow]{i}) [cyan]KID: [red]{kid} [cyan]| KEY: [green]{key_val}{label_str}")
+                console.print(f"    - [red]{kid}[white]:[green]{key_val}{label_str}")
         else:
             console.print("[yellow]No keys extracted")
         

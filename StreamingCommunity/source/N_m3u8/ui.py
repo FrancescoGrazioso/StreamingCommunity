@@ -12,6 +12,7 @@ from StreamingCommunity.utils import internet_manager, get_key
 
 
 # Logic
+from ..utils.object import StreamInfo
 from ..utils.trans_codec import get_audio_codec_name, get_video_codec_name, get_codec_type
 
 
@@ -27,10 +28,18 @@ def build_table(streams, selected: set, cursor: int, window_size: int = 12, high
     )
 
     cols = [
-        ("#", "cyan"), ("Type", "cyan"), ("Ext", "magenta"), ("Sel", "green"),
-        ("Resolution", "yellow"), ("Bitrate", "yellow"), ("Codec", "green"),
-        ("Language", "blue"), ("Name", "green"), ("Duration", "magenta"),
-        ("Segments", None)
+        ("#", "cyan"), 
+        ("Type", "cyan"), 
+        ("Ext", "magenta"), 
+        ("Method", "red"), 
+        ("Sel", "green"),
+        ("Resolution", "yellow"), 
+        ("Bitrate", "yellow"), 
+        ("Codec", "green"),
+        ("Language", "blue"), 
+        ("Name", "green"), 
+        ("Duration", "magenta"),
+        ("Segments", "white")
     ]
     for col, color in cols:
         table.add_column(col, style=color, justify="right" if col in ("#", "Segments") else "left")
@@ -43,14 +52,15 @@ def build_table(streams, selected: set, cursor: int, window_size: int = 12, high
         start = max(0, end - window_size)
 
     if start > 0:
-        table.add_row("...", "", "", "", "", "", "", "", "", "", "")
+        table.add_row("...", "", "", "", "", "", "", "", "", "", "", "")
 
     for visible_idx in range(start, end):
-        s = streams[visible_idx]
+        s: StreamInfo = streams[visible_idx]
+
         idx = visible_idx
         is_selected = idx in selected
         is_cursor = (idx == cursor) and highlight_cursor
-        bitrate = getattr(s, 'bandwidth', '') or ''
+        bitrate = s.bandwidth
         if bitrate in ("0 bps", "N/A"):
             bitrate = ''
         if is_cursor:
@@ -60,35 +70,36 @@ def build_table(streams, selected: set, cursor: int, window_size: int = 12, high
         
         # Transcode codec names
         readable_codecs = ""
-        if "," in getattr(s, 'codec', ''):
-            for raw_codec in getattr(s, 'codec', '').split(","):
+        if "," in s.codec:
+            for raw_codec in s.codec.split(","):
                 if get_codec_type(raw_codec) == "Audio":
                     readable_codecs += f", {get_audio_codec_name(raw_codec)}"
                 elif get_codec_type(raw_codec) == "Video":
                     readable_codecs += get_video_codec_name(raw_codec)
         else:
-            if get_codec_type(getattr(s, 'codec', '')) == "Audio":
-                readable_codecs = get_audio_codec_name(getattr(s, 'codec', ''))
-            elif get_codec_type(getattr(s, 'codec', '')) == "Video":
-                readable_codecs = get_video_codec_name(getattr(s, 'codec', ''))
+            if get_codec_type(s.codec) == "Audio":
+                readable_codecs = get_audio_codec_name(s.codec)
+            elif get_codec_type(s.codec) == "Video":
+                readable_codecs = get_video_codec_name(s.codec)
 
         table.add_row(
             str(idx + 1),
-            f"{getattr(s, 'type', '')}{' [red]*CENC' if getattr(s, 'encrypted', False) else ''}",
-            getattr(s, 'extension', '') or '',
+            f"{s.type}",
+            s.extension or '',
+            str(s.segments_protection),
             "X" if is_selected else "",
-            getattr(s, 'resolution', '') if getattr(s, 'type', '') == "Video" else "",
+            s.resolution if s.type == "Video" else "",
             bitrate,
             readable_codecs,
-            getattr(s, 'language', '') or '',
-            getattr(s, 'name', '') or '',
-            internet_manager.format_time(getattr(s, 'total_duration', 0), add_hours=True) if getattr(s, 'total_duration', 0) > 0 else "N/A",
-            str(getattr(s, 'segment_count', '')),
+            s.language or '',
+            s.name or '',
+            internet_manager.format_time(s.total_duration, add_hours=True) if s.total_duration > 0 else "N/A",
+            str(s.segment_count),
             style=style
         )
 
     if end < total:
-        table.add_row("...", "", "", "", "", "", "", "", "", "", "")
+        table.add_row("...", "", "", "", "", "", "", "", "", "", "", "")
     return table
 
 

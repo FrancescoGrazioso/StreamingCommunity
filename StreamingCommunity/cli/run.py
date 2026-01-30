@@ -17,10 +17,11 @@ from rich.prompt import Prompt
 
 # Internal utilities
 from . import call_global_search
-from StreamingCommunity.setup import get_prd_path, get_wvd_path, get_info_wvd, get_info_prd
+from StreamingCommunity.setup import get_prd_path, get_wvd_path, get_info_wvd, get_info_prd, binary_paths
 from StreamingCommunity.services._base import load_search_functions
 from StreamingCommunity.services._base.loader import folder_name as lazy_loader_folder
 from StreamingCommunity.utils import config_manager, os_manager, start_message
+from StreamingCommunity.utils.db_vault import DBVault
 from StreamingCommunity.upload import git_update, binary_update
 
 
@@ -35,6 +36,7 @@ COLOR_MAP = {
 CATEGORY_MAP = {1: "anime", 2: "film_&_serie", 3: "serie"}
 SHOW_DEVICE_INFO = config_manager.config.get_bool('DEFAULT', 'show_device_info')
 NOT_CLOSE = config_manager.config.get_bool('DEFAULT', 'close_console')
+vault_db = DBVault(os.path.join(binary_paths.get_binary_directory(), 'drm_keys.db'))
 
 
 def run_function(func: Callable[..., None], search_terms: str = None) -> None:
@@ -65,6 +67,7 @@ def initialize():
         sys.exit(0)
 
     # Attempt GitHub update
+    console.print(f"[cyan]Load KEY [LOCAL_DB]: [red]{vault_db.get_db_stats()['total_keys']}")
     try:
         git_update()
     except Exception as e:

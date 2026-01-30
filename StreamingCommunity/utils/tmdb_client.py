@@ -2,6 +2,7 @@
 
 import re
 import unicodedata
+from difflib import SequenceMatcher
 
 
 # External libraries
@@ -48,7 +49,6 @@ class TMDBClient:
             url = f"{self.base_url}/{endpoint}"
             response = create_client(headers={"User-Agent": get_userAgent()}).get(url, params=params)
             response.raise_for_status()
-            
             return response.json()
         except Exception as e:
             console.log(f"[red]Error making request to {endpoint}: {e}[/red]")
@@ -61,39 +61,47 @@ class TMDBClient:
         text = re.sub(r'[-\s]+', '-', text)
         return text
 
+    def _slugs_match(self, slug1: str, slug2: str, threshold: float = 0.85) -> bool:
+        """Check if two slugs are similar enough using fuzzy matching."""
+        ratio = SequenceMatcher(None, slug1, slug2).ratio()
+        return ratio >= threshold
+
     def get_type_and_id_by_slug_year(self, slug: str, year: int, media_type: str = None):
         """
         Get the type (movie or tv) and ID from TMDB based on slug and year.
         """
         if media_type == "movie":
             movie_results = self._make_request("search/movie", {"query": slug.replace('-', ' ')}).get("results", [])
-
+            
             # 1 result
             if len(movie_results) == 1:
                 return {'type': "movie", 'id': movie_results[0]['id']}
-
+            
             # Multiple results
             for movie in movie_results:
                 title = movie.get('title')
                 release_date = movie.get('release_date')
-
+                
                 if release_date:
                     movie_year = int(release_date[:4])
                 else:
                     continue
-
+                
                 movie_slug = self._slugify(title)
-                if movie_slug == slug and movie_year == year:
+                
+                # Use fuzzy matching instead of exact comparison
+                if self._slugs_match(movie_slug, slug) and movie_year == year:
                     return {'type': "movie", 'id': movie['id']}
+            
             return None
-        
+            
         elif media_type == "tv":
             tv_results = self._make_request("search/tv", {"query": slug.replace('-', ' ')}).get("results", [])
-
+            
             # 1 result
             if len(tv_results) == 1:
                 return {'type': "tv", 'id': tv_results[0]['id']}
-
+            
             # Multiple results
             for show in tv_results:
                 name = show.get('name')
@@ -103,16 +111,19 @@ class TMDBClient:
                     show_year = int(first_air_date[:4])
                 else:
                     continue
-
+                
                 show_slug = self._slugify(name)
-                if show_slug == slug and show_year == year:
+                
+                # Use fuzzy matching instead of exact comparison
+                if self._slugs_match(show_slug, slug) and show_year == year:
                     return {'type': "tv", 'id': show['id']}
+            
             return None
-
+            
         else:
             print("Media type not specified. Searching both movie and tv.")
             return None
-    
+
     def get_year_by_slug_and_type(self, slug: str, media_type: str):
         """
         Get the year from TMDB based on slug and type (movie or tv).
@@ -120,11 +131,11 @@ class TMDBClient:
         """
         if media_type == "movie":
             results = self._make_request("search/movie", {"query": slug.replace('-', ' ')}).get("results", [])
-
+            
             # 1 result
             if len(results) == 1:
                 return int(results[0]['release_date'][:4])
-
+            
             # Multiple results
             for movie in results:
                 title = movie.get('title')
@@ -132,18 +143,20 @@ class TMDBClient:
                 
                 if not release_date:
                     continue
-                    
+                
                 movie_slug = self._slugify(title)
-                if movie_slug == slug:
+                
+                # Use fuzzy matching
+                if self._slugs_match(movie_slug, slug):
                     return int(release_date[:4])
                     
         elif media_type == "tv":
-            results = self._make_request("search/tv", {"query": slug.replace('-', ' ')}).get("results")
-
+            results = self._make_request("search/tv", {"query": slug.replace('-', ' ')}).get("results", [])
+            
             # 1 result
             if len(results) == 1:
                 return int(results[0]['first_air_date'][:4])
-
+            
             # Multiple results
             for show in results:
                 name = show.get('name')
@@ -151,9 +164,11 @@ class TMDBClient:
                 
                 if not first_air_date:
                     continue
-
+                
                 show_slug = self._slugify(name)
-                if show_slug == slug:
+                
+                # Use fuzzy matching
+                if self._slugs_match(show_slug, slug):
                     return int(first_air_date[:4])
         
         return None

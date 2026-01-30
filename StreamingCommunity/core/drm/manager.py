@@ -41,8 +41,6 @@ class DRMManager:
                 1) If .wvd file provided, use it
                 2) Else, use remote CDM API if provided
         """
-        console.print("[yellow]=== Widevine Key Extraction ===")
-        
         # Handle pre-existing key
         if key:
             k_split = key.split(':')
@@ -58,8 +56,6 @@ class DRMManager:
             console.print("[yellow]Warning: No PSSH provided for database lookup")
         
         # Step 1: Check database by license URL and PSSH
-        console.print("[cyan]Step 1: Checking database...")
-        
         if license_url and pssh_val:
             found_keys = self.db.get_keys_by_license_and_pssh(license_url, pssh_val, 'widevine')
             
@@ -67,7 +63,6 @@ class DRMManager:
                 return found_keys
         
         # Step 2: Try fallback search by KIDs only
-        console.print("[cyan]Step 2: Trying fallback search by KIDs...")
         kids = [item.get('kid', '').replace('-', '').strip().lower() for item in pssh_list if item.get('kid')]
         valid_kids = [k for k in kids if k and k != 'n/a']
         
@@ -78,7 +73,6 @@ class DRMManager:
                 return found_keys
         
         # Step 3: Try CDM extraction
-        console.print("[cyan]Step 3: Extracting keys from CDM...")
         try:
             keys = get_widevine_keys(pssh_list, license_url, self.widevine_device_path, self.widevine_remote_cdm_api, headers, key, kid_to_label)
                 
@@ -105,8 +99,6 @@ class DRMManager:
                 1) If .prd file provided, use it
                 2) Else, use remote CDM API if provided
         """
-        console.print("[yellow]=== PlayReady Key Extraction ===")
-        
         # Handle pre-existing key
         if key:
             k_split = key.split(':')
@@ -122,8 +114,6 @@ class DRMManager:
             console.print("[yellow]Warning: No PSSH provided for database lookup")
         
         # Step 1: Check database by license URL and PSSH
-        console.print("[cyan]Step 1: Checking database...")
-        
         if license_url and pssh_val:
             found_keys = self.db.get_keys_by_license_and_pssh(license_url, pssh_val, 'playready')
             
@@ -131,7 +121,6 @@ class DRMManager:
                 return found_keys
         
         # Step 2: Try fallback search by KIDs only
-        console.print("[cyan]Step 2: Trying fallback search by KIDs...")
         kids = [item.get('kid', '').replace('-', '').strip().lower() for item in pssh_list if item.get('kid')]
         valid_kids = [k for k in kids if k and k != 'n/a']
         
@@ -142,7 +131,6 @@ class DRMManager:
                 return found_keys
         
         # Step 3: Try CDM extraction
-        console.print("[cyan]Step 3: Extracting keys from CDM...")
         try:
             keys = get_playready_keys(pssh_list, license_url, self.playready_device_path, self.playready_remote_cdm_api, headers, key, kid_to_label)
             

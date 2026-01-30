@@ -313,7 +313,6 @@ class DASH_Downloader:
         self.media_downloader.parser_stream()
         
         # Get metadata
-        console.print("\n[cyan]Starting fetching decryption keys...")
         self.meta_json, self.meta_selected, _, self.raw_mpd = self.media_downloader.get_metadata()
         
         # Extract selected track info

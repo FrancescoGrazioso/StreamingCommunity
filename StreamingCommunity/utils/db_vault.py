@@ -1,5 +1,6 @@
 # 29.01.26
 
+import os
 import sqlite3
 from typing import List, Dict
 from urllib.parse import urlparse
@@ -45,7 +46,6 @@ class DBVault:
                     kid TEXT NOT NULL,
                     key TEXT NOT NULL,
                     label TEXT,
-                    quality TEXT,
                     is_valid BOOLEAN DEFAULT 1,
                     FOREIGN KEY (cache_id) REFERENCES drm_cache(id) ON DELETE CASCADE,
                     UNIQUE(cache_id, kid)
@@ -69,6 +69,53 @@ class DBVault:
             """)
             
             conn.commit()
+
+    def get_db_stats(self) -> Dict[str, object]:
+        """Return statistics about the database."""
+        stats = {'total_caches': 0, 'total_keys': 0, 'db_file_size': 0, 'top_caches_by_keys': [], 'top_accessed_caches': []}
+
+        # File size
+        try:
+            if os.path.exists(self.db_path):
+                stats['db_file_size'] = os.path.getsize(self.db_path)
+        except Exception:
+            stats['db_file_size'] = 0
+
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            try:
+                cursor.execute("SELECT COUNT(*) FROM drm_cache")
+                stats['total_caches'] = cursor.fetchone()[0] or 0
+
+                cursor.execute("SELECT COUNT(*) FROM drm_keys")
+                stats['total_keys'] = cursor.fetchone()[0] or 0
+
+                # Top caches by number of keys
+                cursor.execute(
+                    "SELECT cache_id, COUNT(*) as cnt FROM drm_keys GROUP BY cache_id ORDER BY cnt DESC LIMIT 5"
+                )
+                stats['top_caches_by_keys'] = [(row[0], row[1]) for row in cursor.fetchall()]
+
+                # Top accessed caches
+                cursor.execute(
+                    "SELECT id, base_url_license, drm_type, access_count, last_accessed FROM drm_cache ORDER BY access_count DESC LIMIT 5"
+                )
+                top = []
+                for row in cursor.fetchall():
+                    top.append({
+                        'id': row[0],
+                        'base_url_license': row[1],
+                        'drm_type': row[2],
+                        'access_count': row[3],
+                        'last_accessed': row[4]
+                    })
+                stats['top_accessed_caches'] = top
+
+            except Exception as e:
+                console.print(f"[red]Error collecting DB stats: {e}")
+
+        return stats
     
     def _clean_license_url(self, license_url: str) -> str:
         """Extract base URL from license URL (remove query parameters and fragments)"""
@@ -76,7 +123,7 @@ class DBVault:
         base_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
         return base_url.rstrip('/')
     
-    def add_key(self, kid: str, key: str, drm_type: str, license_url: str, pssh: str = None, label: str = None, quality: str = None) -> bool:
+    def add_key(self, kid: str, key: str, drm_type: str, license_url: str, pssh: str = None, label: str = None) -> bool:
         """Add a single DRM key to the database"""
         # Normalize inputs
         kid = kid.replace('-', '').strip().lower()
@@ -122,7 +169,7 @@ class DBVault:
                     """, (cache_id, kid))
                     
                     if cursor.fetchone():
-                        console.print(f"[yellow]Key already exists for KID: {kid}")
+                        console.print(f"\n[yellow]Key already exists for KID: {kid}")
                         conn.commit()
                         return False
                 else:
@@ -135,9 +182,9 @@ class DBVault:
                 
                 # Insert key
                 cursor.execute("""
-                    INSERT INTO drm_keys (cache_id, kid, key, label, quality)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (cache_id, kid, key, label, quality))
+                    INSERT INTO drm_keys (cache_id, kid, key, label)
+                    VALUES (?, ?, ?, ?)
+                """, (cache_id, kid, key, label))
                 
                 conn.commit()
                 return True
@@ -212,25 +259,23 @@ class DBVault:
             
             # Retrieve all keys
             cursor.execute("""
-                SELECT kid, key, label, quality 
+                SELECT kid, key, label 
                 FROM drm_keys 
                 WHERE cache_id = ? AND is_valid = 1
             """, (cache_id,))
             
             keys = []
             for row in cursor.fetchall():
-                kid, key, label, quality = row
+                kid, key, label = row
                 keys.append(f"{kid}:{key}")
                 
-                # Display label/quality if available
+                # Display label if available
                 info = []
                 if label:
                     info.append(f"[red]{label}")
-                if quality:
-                    info.append(f"[red]{quality}")
                 info_str = f" [cyan]| {' | '.join(info)}" if info else ""
                 
-                console.print(f"[green] Found {drm_type.upper()} key: [red]{kid}[cyan]:[green]{key}{info_str}")
+                console.print(f"[green] [LOCAL_DB] {drm_type.upper()}: [red]{kid}[cyan]:[green]{key}{info_str}")
             
             conn.commit()
             return keys
@@ -291,7 +336,7 @@ class DBVault:
                 # Get keys for specific cache entry
                 placeholders = ','.join('?' * len(normalized_kids))
                 cursor.execute(f"""
-                    SELECT kid, key, label, quality 
+                    SELECT kid, key, label
                     FROM drm_keys 
                     WHERE cache_id = ? AND kid IN ({placeholders}) AND is_valid = 1
                 """, [cache_id] + normalized_kids)
@@ -313,7 +358,7 @@ class DBVault:
                 cache_placeholders = ','.join('?' * len(cache_ids))
                 
                 cursor.execute(f"""
-                    SELECT kid, key, label, quality 
+                    SELECT kid, key, label 
                     FROM drm_keys 
                     WHERE cache_id IN ({cache_placeholders}) 
                         AND kid IN ({placeholders}) 
@@ -322,18 +367,15 @@ class DBVault:
             
             keys = []
             for row in cursor.fetchall():
-                kid, key, label, quality = row
+                kid, key, label = row
                 keys.append(f"{kid}:{key}")
                 
-                # Display label/quality if available
+                # Display label if available
                 info = []
                 if label:
                     info.append(f"[red]{label}")
-                if quality:
-                    info.append(f"[red]{quality}")
                 info_str = f" [cyan]| {' | '.join(info)}" if info else ""
-                
-                console.print(f"[green] Found {drm_type.upper()} key: [red]{kid}{info_str}")
+                console.print(f"[green] [LOCAL_DB] Found {drm_type.upper()} key: [red]{kid}{info_str}")
             
             conn.commit()
             return keys
